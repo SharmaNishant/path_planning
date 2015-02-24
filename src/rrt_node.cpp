@@ -74,20 +74,20 @@ vector< vector<geometry_msgs::Point> > getObstacles()
 void addBranchtoRRTTree(visualization_msgs::Marker &rrtTreeMarker, RRT::rrtNode &tempNode, RRT &myRRT)
 {
 
-geometry_msgs::Point point;
+    geometry_msgs::Point point;
 
-point.x = tempNode.posX;
-point.y = tempNode.posY;
-point.z = 0;
-rrtTreeMarker.points.push_back(point);
+    point.x = tempNode.posX;
+    point.y = tempNode.posY;
+    point.z = 0;
+    rrtTreeMarker.points.push_back(point);
 
-RRT::rrtNode parentNode = myRRT.getParent(tempNode.nodeID);
+    RRT::rrtNode parentNode = myRRT.getParent(tempNode.nodeID);
 
-point.x = parentNode.posX;
-point.y = parentNode.posY;
-point.z = 0;
+    point.x = parentNode.posX;
+    point.y = parentNode.posY;
+    point.z = 0;
 
-rrtTreeMarker.points.push_back(point);
+    rrtTreeMarker.points.push_back(point);
 }
 
 bool checkIfInsideBoundary(RRT::rrtNode &tempNode)

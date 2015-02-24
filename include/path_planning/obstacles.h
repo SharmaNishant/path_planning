@@ -6,15 +6,22 @@
 
 using namespace std;
 
+struct obstacleLine
+{
+    int id;
+    geometry_msgs::Point point[2];
+};
+
 class obstacles
 {
     public:
         /** Default constructor */
-        obstacles() {}
+        obstacles();
         /** Default destructor */
         virtual ~obstacles() {}
 
         vector< vector<geometry_msgs::Point> > getObstacleArray();
+        vector< obstacleLine > getObstacleLines();
 
     protected:
     private:

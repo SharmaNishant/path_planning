@@ -2,7 +2,7 @@
 #include <geometry_msgs/Point.h>
 
 
-vector< vector<geometry_msgs::Point> > obstacles::getObstacleArray()
+obstacles::obstacles()
 {
     vector<geometry_msgs::Point> obstaclePoint;
     geometry_msgs::Point point;
@@ -40,8 +40,32 @@ vector< vector<geometry_msgs::Point> > obstacles::getObstacleArray()
     point.z = 0;
     obstaclePoint.push_back(point);
 
-    obstacleArray.push_back(obstaclePoint);
-
-    return obstacleArray;
-
+    this->obstacleArray.push_back(obstaclePoint);
 }
+
+vector< vector<geometry_msgs::Point> > obstacles::getObstacleArray()
+{
+    return obstacleArray;
+}
+
+
+vector< obstacleLine > obstacles::getObstacleLines()
+{
+    int counter = 0;
+    vector <obstacleLine> lines;
+    obstacleLine line;
+
+    for(int i=0 ; i< obstacleArray.size();i++)
+    {
+
+        for(int j=1; j<5; j++)
+        {
+            line.id = counter++;
+            line.point[0] = obstacleArray[i][j-1];
+            line.point[1] = obstacleArray[i][j];
+            lines.push_back(line);
+        }
+    }
+    return lines;
+}
+
