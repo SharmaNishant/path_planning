@@ -13,6 +13,7 @@ int sourceY =  2;
 int goalX   = 95;
 int goalY   = 95;
 
+double minDistaceFromLines = 0.6;
 
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
@@ -74,7 +75,7 @@ void displayBugs(vector<bug> bugs, visualization_msgs::Marker &sourcePoint, ros:
         point.x = bugs[i].getPosX();
         point.y = bugs[i].getPosY();
         point.z = 0;
-       // points.push_back(point);
+        //points.push_back(point);
     }
     sourcePoint.points = points;
     bug_publisher.publish(sourcePoint);
@@ -153,17 +154,18 @@ bool checkInsideObstacles(vector< vector<geometry_msgs::Point> > &obstArray, dou
 
 float checkDistancetoObstacleBoundary(vector < obstacleLine > obstacleLines, float newX, float newY, float &pointX, float &pointY, vector<int> &lineId)
 {
+    lineId.clear();
     double mini = 2,result;
     for(int i=0; i< obstacleLines.size(); i++)
     {
         result = DistanceFromLineSegmentToPoint(obstacleLines[i].point[0].x,obstacleLines[i].point[0].y,obstacleLines[i].point[1].x,obstacleLines[i].point[1].y,newX,newY,&pointX,&pointY);
-        if(result < mini)
+        if(result < minDistaceFromLines)
         {
             //mini = result;
             lineId.push_back(i);
         }
     }
-    //ROS_INFO("in function %f, %d", mini, lineId);
+    //ROS_INFO("in function %f, %f", pointX, pointY);
     return mini;
 }
 
@@ -203,30 +205,28 @@ bool isNearGoal(double x, double y)
         return false;
 }
 
-bool get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
-    float p2_x, float p2_y, float p3_x, float p3_y)
+// Returns 1 if the lines intersect, otherwise 0. In addition, if the lines
+// intersect the intersection point may be stored in the floats i_x and i_y.
+char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
+    float p2_x, float p2_y, float p3_x, float p3_y, float &i_x, float &i_y)
 {
-    float s02_x, s02_y, s10_x, s10_y, s32_x, s32_y, s_numer, t_numer, denom, t;
-    s10_x = p1_x - p0_x;
-    s10_y = p1_y - p0_y;
-    s02_x = p0_x - p2_x;
-    s02_y = p0_y - p2_y;
+    float s1_x, s1_y, s2_x, s2_y;
+    s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
+    s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
 
-    s_numer = s10_x * s02_y - s10_y * s02_x;
-    if (s_numer < 0)
-        return false; // No collision
+    float s, t;
+    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
 
-    s32_x = p3_x - p2_x;
-    s32_y = p3_y - p2_y;
-    t_numer = s32_x * s02_y - s32_y * s02_x;
-    if (t_numer < 0)
-        return false; // No collision
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+    {
+        // Collision detected
+        i_x = p0_x + (t * s1_x);
+        i_y = p0_y + (t * s1_y);
+        return 1;
+    }
 
-    denom = s10_x * s32_y - s32_x * s10_y;
-    if (s_numer > denom || t_numer > denom)
-        return false; // No collision
-
-    return true;
+    return 0; // No collision
 }
 
 void displayPaths(vector<bug> bugs,visualization_msgs::Marker &pathMarker,ros::Publisher &bug_publisher)
@@ -270,7 +270,7 @@ void displayFinalPath(vector<bug> bugs,visualization_msgs::Marker &finalPath,ros
         {
             path_length += sqrt(pow(path[j-1].x-path[j].x,2)+pow(path[j-1].y-path[j].y,2));
         }
-
+        //ROS_INFO("Path %d -> Length = %f",i+1,path_length);
         if(path_length < min_path)
         {
             min_path = path_length;
@@ -279,12 +279,14 @@ void displayFinalPath(vector<bug> bugs,visualization_msgs::Marker &finalPath,ros
 
     }
 
+   //ROS_INFO("Min Path %d -> Length = %f",minPathId,bugs[minPathId].getPathLength());
 
     path = bugs[minPathId].getPath();
     for(int j=1; j<bugs[minPathId].getPathLength();j++)
     {
         point.x = path[j-1].x;
         point.y = path[j-1].y;
+        //ROS_INFO("Min Path index %d -> points = %f || %f",j,path[j-1].x,path[j-1].y);
         points.push_back(point);
         point.x = path[j].x;
         point.y = path[j].y;
@@ -298,12 +300,12 @@ void displayFinalPath(vector<bug> bugs,visualization_msgs::Marker &finalPath,ros
 int main(int argc, char** argv)
 {
     //initializing ROS
-    ros::init(argc,argv,"rrt_node");
+    ros::init(argc,argv,"bug_node");
 	ros::NodeHandle n;
 
 	//defining Publisher
-	ros::Publisher bug_publisher = n.advertise<visualization_msgs::Marker>("path_planner_rrt",1);
-
+	ros::Publisher bug_publisher = n.advertise<visualization_msgs::Marker>("path_planner_bug",1);
+    ros::Duration(1).sleep();
 	//defining markers
     visualization_msgs::Marker sourcePoint;
     visualization_msgs::Marker goalPoint;
@@ -335,19 +337,25 @@ int main(int argc, char** argv)
 
     int bugsCompleteCounter = 0;
 
+    ros::Time time = ros::Time::now();
+
     while(ros::ok())
     {
-        displayBugs(bugs, sourcePoint,bug_publisher);
+        //displayBugs(bugs, sourcePoint,bug_publisher);
         bugsCompleteCounter = 0;
         for(int i=0; i < bugs.size(); i++)
         {
             if(isNearGoal(bugs[i].getPosX(),bugs[i].getPosY()))
             {
+                bugsCompleteCounter++;
+
+                if(bugs[i].getState() == reachedEnd) continue;
+
                 loc.x = goalX;
                 loc.y = goalY;
                 bugs[i].addNodeToPath(loc);
 
-                bugsCompleteCounter++;
+
                 bugs[i].setState(reachedEnd);
             }
 
@@ -359,14 +367,21 @@ int main(int argc, char** argv)
                 double theta = atan2(goalY - bugs[i].getPosY(), goalX - bugs[i].getPosX());
                 float newX = bugs[i].getPosX() + ( bugs[i].getStepSize() * cos(theta));
                 float newY = bugs[i].getPosY() + ( bugs[i].getStepSize() * sin(theta));
-
                 //ROS_INFO("theta, %f - %f || %f ", newX,newY, theta);
 
                 float pointX,pointY;
                 vector<int> lineIds;
                 float distance = checkDistancetoObstacleBoundary(obstacleLines, newX, newY,pointX,pointY, lineIds);
+               // ROS_INFO("total lines robot %d, lines size = %ld", i, lineIds.size());
 
-                 //ROS_INFO("line, %f - %f || %d || %f", pointX,pointX, lineId, distance );
+//                for(int j=0;j< lineIds.size();j++)
+//                {
+//                    ROS_INFO("%f || %f || %f || %f",obstacleLines[lineIds[j]].point[0].x, obstacleLines[lineIds[j]].point[0].y,
+//                            obstacleLines[lineIds[j]].point[1].x, obstacleLines[lineIds[j]].point[1].y);
+//                }
+
+               // ROS_INFO("line, %f - %f || %f", pointX,pointY, distance);
+
                 int lineId;
                 bool lineFlag = false;
                 for(int j=0;j< lineIds.size();j++)
@@ -374,7 +389,7 @@ int main(int argc, char** argv)
                     lineId = lineIds[j];
                     if(get_line_intersection(obstacleLines[lineId].point[0].x, obstacleLines[lineId].point[0].y,
                             obstacleLines[lineId].point[1].x, obstacleLines[lineId].point[1].y,
-                            goalX, goalY, bugs[i].getPosX(), bugs[i].getPosY()))
+                            goalX, goalY, bugs[i].getPosX(), bugs[i].getPosY(),pointX,pointY) == 1)
                     {
                         lineFlag = true;
                         break;
@@ -425,7 +440,7 @@ int main(int argc, char** argv)
                 float newX = bugs[i].getPosX() + ( bugs[i].getStepSize() * cos(theta));
                 float newY = bugs[i].getPosY() + ( bugs[i].getStepSize() * sin(theta));
 
-                if( checkInsideObstacles(obstacleList, newX, newY))
+                if(checkInsideObstacles(obstacleList, newX, newY))
                 {
                     int index;
                     double newerX = bugs[i].getPosX();
@@ -434,6 +449,7 @@ int main(int argc, char** argv)
                     if(index == 5) exit(1);
                     bugs[i].setPosX(obstacleLines[line].point[index].x);
                     bugs[i].setPosY(obstacleLines[line].point[index].y);
+                    bugs[i].setBoundaryID(line);
                     loc.x = bugs[i].getPosX();
                     loc.y = bugs[i].getPosY();
                     bugs[i].addNodeToPath(loc);
@@ -454,13 +470,16 @@ int main(int argc, char** argv)
         {
             break;
         }
-    bug_publisher.publish(goalPoint);
-    //ros::Duration(0.1).sleep();
+    //bug_publisher.publish(goalPoint);
+    //ros::Duration(0.01).sleep();
     }
+    ROS_INFO("End, Total Time = %d", ros::Time::now().nsec - time.nsec);
+    displayBugs(bugs,sourcePoint,bug_publisher);
     bug_publisher.publish(goalPoint);
     displayPaths(bugs, pathMarker, bug_publisher);
     displayFinalPath(bugs, finalPath, bug_publisher);
-    ros::Duration(0.1).sleep();
+    ros::Duration(1).sleep();
+    ros::spinOnce();
 //    displayPaths();
 
 

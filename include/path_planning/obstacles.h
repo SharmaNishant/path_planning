@@ -6,6 +6,13 @@
 
 using namespace std;
 
+struct obstacleDef{
+float x;
+float y;
+float height;
+float width;
+};
+
 struct obstacleLine
 {
     int id;
@@ -22,7 +29,7 @@ class obstacles
 
         vector< vector<geometry_msgs::Point> > getObstacleArray();
         vector< obstacleLine > getObstacleLines();
-
+        vector< geometry_msgs::Point > getObstaclePoints();
     protected:
     private:
         vector< vector<geometry_msgs::Point> > obstacleArray;

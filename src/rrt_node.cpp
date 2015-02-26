@@ -149,7 +149,7 @@ bool addNewPointtoRRT(RRT &myRRT, RRT::rrtNode &tempNode, int rrtStepSize, vecto
 bool checkNodetoGoal(int X, int Y, RRT::rrtNode &tempNode)
 {
     double distance = sqrt(pow(X-tempNode.posX,2)+pow(Y-tempNode.posY,2));
-    if(distance < 3)
+    if(distance < 1)
     {
         return true;
     }
@@ -201,10 +201,10 @@ int main(int argc,char** argv)
     goalPoint.pose.position.x = 95;
     goalPoint.pose.position.y = 95;
 
-    rrt_publisher.publish(sourcePoint);
-    rrt_publisher.publish(goalPoint);
-    ros::spinOnce();
-    ros::Duration(0.01).sleep();
+//    rrt_publisher.publish(sourcePoint);
+ //   rrt_publisher.publish(goalPoint);
+ //   ros::spinOnce();
+  //  ros::Duration(0.01).sleep();
 
     srand (time(NULL));
     //initialize rrt specific variables
@@ -214,11 +214,11 @@ int main(int argc,char** argv)
     int goalX, goalY;
     goalX = goalY = 95;
 
-    int rrtStepSize = 3;
+    int rrtStepSize = 1;
 
     vector< vector<int> > rrtPaths;
     vector<int> path;
-    int rrtPathLimit = 1;
+    int rrtPathLimit = 10;
 
     int shortestPathLength = 9999;
     int shortestPath = -1;
@@ -228,6 +228,8 @@ int main(int argc,char** argv)
     vector< vector<geometry_msgs::Point> >  obstacleList = getObstacles();
 
     bool addNodeResult = false, nodeToGoal = false;
+
+    ros::Time time = ros::Time::now();
 
     while(ros::ok() && status)
     {
@@ -246,7 +248,7 @@ int main(int argc,char** argv)
                 {
                     path = myRRT.getRootToEndPath(tempNode.nodeID);
                     rrtPaths.push_back(path);
-                    std::cout<<"New Path Found. Total paths "<<rrtPaths.size()<<endl;
+                    //std::cout<<"New Path Found. Total paths "<<rrtPaths.size()<<endl;
                     //ros::Duration(10).sleep();
                     //std::cout<<"got Root Path"<<endl;
                 }
@@ -255,7 +257,7 @@ int main(int argc,char** argv)
         else //if(rrtPaths.size() >= rrtPathLimit)
         {
             status = success;
-            std::cout<<"Finding Optimal Path"<<endl;
+            //std::cout<<"Finding Optimal Path"<<endl;
             for(int i=0; i<rrtPaths.size();i++)
             {
                 if(rrtPaths[i].size() < shortestPath)
@@ -265,16 +267,19 @@ int main(int argc,char** argv)
                 }
             }
             setFinalPathData(rrtPaths, myRRT, shortestPath, finalPath, goalX, goalY);
-            rrt_publisher.publish(finalPath);
+            //rrt_publisher.publish(finalPath);
+            break;
         }
 
-
-        rrt_publisher.publish(sourcePoint);
-        rrt_publisher.publish(goalPoint);
-        rrt_publisher.publish(rrtTreeMarker);
-        //rrt_publisher.publish(finalPath);
-        ros::spinOnce();
-        ros::Duration(0.01).sleep();
     }
+    ROS_INFO("End, Total Time = %d", ros::Time::now().nsec - time.nsec);
+    ros::Duration(0.1).sleep();
+    rrt_publisher.publish(sourcePoint);
+    rrt_publisher.publish(goalPoint);
+    rrt_publisher.publish(rrtTreeMarker);
+    ROS_INFO("End, Total branches = %ld", rrtTreeMarker.points.size());
+    rrt_publisher.publish(finalPath);
+    ros::spinOnce();
+    ros::Duration(0.01).sleep();
 	return 1;
 }
