@@ -338,7 +338,7 @@ int main(int argc,char** argv)
     myDijkstra.getShortestPath(0,1,path);
 
     ros::Time endTime = ros::Time::now();
-    ROS_INFO("Total Time %d", endTime.nsec - startTime.nsec);
+    ROS_INFO("End, Total Time = %d, %d", ros::Time::now().sec - startTime.sec, ros::Time::now().nsec - startTime.nsec);
     allPathsMarker(lines,vgPathsMarker);
     finalPathMarker(obstaclePoints,path,finalPath);
     ros::Duration(1).sleep();

@@ -218,7 +218,9 @@ int main(int argc,char** argv)
 
     vector< vector<int> > rrtPaths;
     vector<int> path;
-    int rrtPathLimit = 10;
+    int rrtPathLimit;
+
+    cin>>rrtPathLimit;
 
     int shortestPathLength = 9999;
     int shortestPath = -1;
@@ -272,7 +274,7 @@ int main(int argc,char** argv)
         }
 
     }
-    ROS_INFO("End, Total Time = %d", ros::Time::now().nsec - time.nsec);
+    ROS_INFO("End, Total Time = %d, %d", ros::Time::now().sec - time.sec, ros::Time::now().nsec - time.nsec);
     ros::Duration(0.1).sleep();
     rrt_publisher.publish(sourcePoint);
     rrt_publisher.publish(goalPoint);
