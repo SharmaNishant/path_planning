@@ -1,6 +1,7 @@
 #ifndef BUG_H
 #define BUG_H
 
+#include <ros/ros.h>
 #include <geometry_msgs/Point.h>
 #include <path_planning/obstacles.h>
 #include <vector>
@@ -66,11 +67,14 @@ class LocationArray
 {
     public:
         int addLocationToList(location loc);
-        int updateLocation(int id, location loc);
-        int getDistance(int id);
+        location getElement(int id) { return locationList[id];};
+        void updateLocation(int id, location loc, bool sameFlag);
+        float getDistance(int id);
         void setDistance(int id, float distance);
         int searchLocation(float x, float y);
         void eraseBugData(int id);
+        void removeElement(int id);
+        vector<location> getLocationList() { return locationList;};
     protected:
     private:
         vector<location> locationList;
@@ -83,6 +87,7 @@ class Bug
         ~Bug();
 
         void setState(State state);
+        void setXY(float x, float y);
         void setX(float x);
         void setY(float y);
         void setLastX(float x);
@@ -103,12 +108,16 @@ class Bug
         int getBoundaryID();
         float getDistance();
         int getLastPointID();
-        Bug* getNext();
-        Bug* getPrev();
 
         /** Actual Bug Function */
-       bool moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstacleList,
-                    int &pointID, int &pointIDOne,int &pointIDTwo, LocationArray &locationList, bool &killFlag, Bug* newbug);
+       //void moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstacleList,
+       //             int &pointID, int &pointIDOne,int &pointIDTwo, LocationArray &locationList, bool &killFlag, Bug** newbug);
+
+
+        int checkIfOnOtherLines(vector < obstacleLine > &obstacleLines, int &index);
+        bool checkInsideObstacles(vector< vector<geometry_msgs::Point> > &obstArray, float goalX, float goalY);
+        vector<intersectingPoint> getLineIntersections(float goalX, float goalY, vector < obstacleLine > &obstacleLines);
+        float getEuclideanDistance(float p0_x, float p0_y, float p1_x, float p1_y);
 
     protected:
     private:
@@ -124,26 +133,6 @@ class Bug
         int boundaryID;
         float distance;
         State state;
-        Bug *next;
-        Bug *prev;
 
-
-        int checkIfOnOtherLines(vector < obstacleLine > obstacleLines, int &index);
-        bool checkInsideObstacles(vector< vector<geometry_msgs::Point> > &obstArray, float goalX, float goalY);
-        vector<intersectingPoint> getLineIntersections(float goalX, float goalY, vector < obstacleLine > obstacleLines);
-        float getEuclideanDistance(float p0_x, float p0_y, float p1_x, float p1_y);
 };
-
-
-class BugList {
-    protected:
-    public:
-      Bug *head;
-      Bug *tail;
-
-     BugList() { head = NULL; tail = NULL;};
-     void Append(Bug* data);
-     void Remove(int ids);
-};
-
 #endif // BUG_H

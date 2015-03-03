@@ -12,8 +12,6 @@ Bug::Bug(State state, float x, float y, float dist, int lastPTID, int boundID)
     this->lastPointID = lastPTID;
     this->boundaryID = dist;
     this->distance = dist;
-    this->next = NULL;
-    this->prev = NULL;
 }
 
 Bug::~Bug()
@@ -30,13 +28,22 @@ void Bug::setState(State state)
 	this->state = state;
 }
 
+void Bug::setXY(float i_x, float i_y)
+{
+    this->x = x;
+    this->y = y;
+    //if(i_x == )
+}
+
 void Bug::setX(float x)
 {
+    this->lastX = this->x;
     this->x = x;
 }
 
 void Bug::setY(float y)
 {
+    this->lastY = this->y;
     this->y = y;
 }
 
@@ -70,15 +77,6 @@ void Bug::addDistance(float dist)
     this->distance += dist;
 }
 
-void Bug::setNext(Bug *next)
-{
-    this->next = next;
-}
-
-void Bug::setPrev(Bug *prev)
-{
-    this->prev = prev;
-}
 
 /**
     Get Functions
@@ -129,16 +127,6 @@ int Bug::getLastPointID()
     return this->lastPointID;
 }
 
-Bug* Bug::getNext()
-{
-    return this->next;
-}
-
-Bug* Bug::getPrev()
-{
-    return this->prev;
-}
-
 /**
     Bug Functions
 */
@@ -146,11 +134,11 @@ Bug* Bug::getPrev()
 
 
 
-
-bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstacleList,
-                    int &pointID, int &pointIDOne,int &pointIDTwo, LocationArray &locationList, bool &killFlag, Bug* newBug)
+/*
+void Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstacleList,
+                    int &pointID, int &pointIDOne,int &pointIDTwo, LocationArray &locationList, bool &killFlag, Bug** newBug)
 {
-    /** initialization of return parameters **/
+    /** initialization of return parameters **
     pointID = -1;
     pointIDOne = -1;
     pointIDTwo = -1;
@@ -163,8 +151,8 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
         vector<intersectingPoint> lineIds;
         lineIds = getLineIntersections(goalX, goalY, obstacleLines);
 
-
-        /** routine for getting nearest line **/
+        ROS_INFO("got all lines");
+        /** routine for getting nearest line **
         int lineId;
         int intersectionPointID;
         bool lineFlag = false;
@@ -184,8 +172,8 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 lineFlag = true;
             }
         }
-
-        /** if there is a line in the way **/
+        ROS_INFO("got nearest interesting line");
+        /** if there is a line in the way **
         if(lineFlag)
         {
             this->addDistance(minDist);
@@ -197,7 +185,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             loc.setPrevNode(this->getLastPointID());
             loc.addBugtoList(this->getID());
 
-            /*** adding intersection point ***/
+            /*** adding intersection point ***
             int locID = locationList.searchLocation(lineIds[intersectionPointID].x,lineIds[intersectionPointID].y);
             if(locID != -1)
             {
@@ -205,7 +193,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 if(prevDistanceToPoint < loc.getDistance())
                 {
                     killFlag = true;
-                    return false;
+                    return;
                 }
                 else
                 {
@@ -221,7 +209,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 this->setLastPointID(tempID);
             }
 
-            /** changing state **/
+            /** changing state **
             this->setBoundaryID(lineId);
             this->setState(boundaryFollowing);
 
@@ -231,7 +219,8 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             this->setY(obstacleLines[lineId].point[1].y);
             this->addDistance(getEuclideanDistance(this->getX(),this->getY(),obstacleLines[lineId].point[0].x,obstacleLines[lineId].point[0].y));
 
-            /** add to path **/
+            ROS_INFO("the same bug");
+            /** add to path **
             loc.setX(getX());
             loc.setY(getY());
             loc.setDistance(this->getDistance());
@@ -241,11 +230,13 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             locID = locationList.searchLocation(getX(), getY());
             if(locID != -1)
             {
+                ROS_INFO("locID, %f || %f",loc.getX(),loc.getY());
                 float prevDistanceToPoint = locationList.getDistance(locID);
                 if(prevDistanceToPoint < loc.getDistance())
                 {
+                    ROS_INFO("inside small distance, %f",loc.getDistance());
                     killFlag = true;
-                    return false;
+                    return;
                 }
                 else
                 {
@@ -256,6 +247,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             }
             else
             {
+                ROS_INFO("adding a new point");
                 int tempID = locationList.addLocationToList(loc);
                 this->setLastPointID(tempID);
             }
@@ -268,7 +260,8 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             newTempBug->setY(obstacleLines[lineId].point[0].y);
             newTempBug->addDistance(getEuclideanDistance(newTempBug->getX(),newTempBug->getY(),obstacleLines[lineId].point[0].x,obstacleLines[lineId].point[0].y));
 
-            /** add to path **/
+            ROS_INFO("adding a new bug");
+            /** add to path **
             loc.setX(newTempBug->getX());
             loc.setY(newTempBug->getY());
             loc.setDistance(newTempBug->getDistance());
@@ -281,10 +274,12 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 float prevDistanceToPoint = locationList.getDistance(locID);
                 if(prevDistanceToPoint < loc.getDistance())
                 {
-                    return true;
+                    ROS_INFO("inside small distance, %f",loc.getDistance());
+                    return;
                 }
                 else
                 {
+                    ROS_INFO("adding new point");
                     int tempID = locationList.updateLocation(locID, loc);
                     pointIDOne = tempID;
                     newTempBug->setLastPointID(tempID);
@@ -292,15 +287,17 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             }
             else
             {
+                ROS_INFO("adding new point");
                 int tempID = locationList.addLocationToList(loc);
                 newTempBug->setLastPointID(tempID);
             }
-
-            newBug = newTempBug;
-            return true;
+            ROS_INFO("saving pointers to new bug");
+            *newBug = newTempBug;
+            return;
         }
         else
         {
+            ROS_INFO("adding goal to bug");
             location loc;
             this->setState(reachedEnd);
             killFlag = true;
@@ -308,7 +305,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             this->setX(goalX);
             this->setY(goalY);
 
-            /** add to path **/
+            /** add to path **
             loc.setX(getX());
             loc.setY(getY());
             loc.setDistance(this->getDistance());
@@ -322,24 +319,25 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 if(prevDistanceToPoint < loc.getDistance())
                 {
                     killFlag = true;
-                    return false;
+                    return;
                 }
                 else
                 {
                     locationList.updateLocation(locID, loc);
-                    return true;
+                    return;
                 }
             }
             else
             {
                 locationList.addLocationToList(loc);
-                return true;
+                return;
             }
         }
     }
 
     else if(this->getState() == boundaryFollowing)
     {
+        ROS_INFO("insode boundary following");
         location loc;
         if(checkInsideObstacles(obstacleList, goalX, goalY))
         {
@@ -352,7 +350,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
             this->setY(obstacleLines[line].point[index].y);
             this->setBoundaryID(line);
             this->addDistance(getEuclideanDistance(getX(),getY(),getLastX(),getLastY()));
-            /** add to path **/
+            /** add to path **
             loc.setX(getX());
             loc.setY(getY());
             loc.setDistance(this->getDistance());
@@ -366,7 +364,7 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 if(prevDistanceToPoint < loc.getDistance())
                 {
                     killFlag = true;
-                    return false;
+                    return;
                 }
                 else
                 {
@@ -381,18 +379,15 @@ bool Bug::moveBug(float goalX, float goalY, vector < obstacleLine > &obstacleLin
                 this->setLastPointID(tempID);
                 pointID = tempID;
             }
-        return true;
+        return;
         }
         else
         {
             this->setState(movingToGoal);
-            return true;
+            return;
         }
     }
-}
-
-
-
+} */
 
 
 
@@ -424,7 +419,7 @@ bool Bug::checkInsideObstacles(vector< vector<geometry_msgs::Point> > &obstArray
     return false;
 }
 
-int Bug::checkIfOnOtherLines(vector < obstacleLine > obstacleLines, int &index)
+int Bug::checkIfOnOtherLines(vector < obstacleLine > &obstacleLines, int &index)
 {
     for(int i=0; i< obstacleLines.size(); i++)
     {
@@ -448,7 +443,7 @@ int Bug::checkIfOnOtherLines(vector < obstacleLine > obstacleLines, int &index)
     return -1;
 }
 
-vector<intersectingPoint> Bug::getLineIntersections(float goalX, float goalY, vector < obstacleLine > obstacleLines)
+vector<intersectingPoint> Bug::getLineIntersections(float goalX, float goalY, vector < obstacleLine > &obstacleLines)
 {
     float p0_x = this->getX();
     float p0_y = this->getY();
@@ -485,6 +480,8 @@ vector<intersectingPoint> Bug::getLineIntersections(float goalX, float goalY, ve
             i_x = p0_x + (t * s1_x);
             i_y = p0_y + (t * s1_y);
 
+            if(i_x == p0_x && i_y == p0_y) continue;
+
             iPoint.ID = i;
             iPoint.x = i_x;
             iPoint.y = i_y;
@@ -497,45 +494,4 @@ vector<intersectingPoint> Bug::getLineIntersections(float goalX, float goalY, ve
 float Bug::getEuclideanDistance(float p0_x, float p0_y, float p1_x, float p1_y)
 {
     return sqrt(pow(p1_x - p0_x,2) + pow(p1_y - p0_y,2));
-}
-
-void BugList::Append(Bug* data)
-{
-     data->setNext(NULL);
-     Bug *tmp = head;
-     if ( head == NULL ) {
-        head = tail = data;
-        data->setPrev(NULL);
-        data->setNext(NULL);
-     }
-     else
-     {
-        tail->setNext(data);
-        data->setPrev(tail);
-        data->setNext(NULL);
-        tail = data;
-     }
-}
-
-void BugList::Remove(int ids)
-{
-     Bug *tmp = head;
-     if ( tmp == NULL )
-          return;
-     if ( tmp->getNext() == NULL ) {
-          delete tmp;
-          head = NULL;
-     }
-     else {
-          Bug *prev;
-          do {
-              if ( tmp->getID() == ids ) break;
-              prev = tmp;
-              tmp = tmp->getNext();
-          } while ( tmp != NULL );
-
-     prev->setNext(tmp->getNext());
-     prev->getNext()->setPrev(prev);
-     delete tmp;
-     }
 }

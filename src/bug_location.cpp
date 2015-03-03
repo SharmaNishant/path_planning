@@ -112,18 +112,28 @@ int LocationArray::addLocationToList(location loc)
 {
     int id = locationList.size();
     loc.setCurrNode(id);
+    loc.setNextNode(-1);
     locationList.push_back(loc);
     locationList[locationList[id].getPrevNode()].setNextNode(id);
     return id;
 }
-int LocationArray::updateLocation(int id, location loc)
+
+void LocationArray::updateLocation(int id, location loc, bool sameFlag)
 {
+    //ROS_INFO("updating %d, p %d -- l = %f || c = %f", id, loc.getPrevNode(), locationList[id].getDistance() ,loc.getDistance() );
+    int prevID = locationList[id].getPrevNode();
+
+    loc.setCurrNode(id);
+    loc.setNextNode(-1);
     locationList[id] = loc;
+    if(sameFlag)
+    {
+        locationList[id].setPrevNode(prevID);
+    }
     locationList[locationList[id].getPrevNode()].setNextNode(id);
-    return locationList[id].getCurrNode();
 }
 
-int LocationArray::getDistance(int id)
+float LocationArray::getDistance(int id)
 {
     return locationList[id].getDistance();
 }
@@ -138,11 +148,25 @@ int LocationArray::searchLocation(float x, float y)
 {
     for(int i=0;i<locationList.size();i++)
     {
-        if(locationList[i].getX() == x && locationList[i].getY() == y) return locationList[i].getCurrNode();
+        if(locationList[i].getX() == x && locationList[i].getY() == y)
+            return locationList[i].getCurrNode();
     }
     return -1;
 }
 
 void LocationArray::eraseBugData(int id)
 {
+    this->locationList[id].eraseBugDetails();
+}
+
+void LocationArray::removeElement(int id)
+{
+//    for(int i=0;i< locationList.size();i++)
+//    {
+//        if(locationList[i].getID() == id)
+//        {
+//            locationList.erase(locationList.begin()+i);
+//            break;
+//        }
+//    }
 }
