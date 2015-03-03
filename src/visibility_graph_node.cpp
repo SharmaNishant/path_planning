@@ -282,7 +282,6 @@ void finalPathMarker(vector<geometry_msgs::Point> &obstaclePoints, vector<int> &
     finalPathMarker.points.clear();
     for(int i=0; i< path.size(); i++)
     {
-        //cout<<path[i]<<endl;
         finalPathMarker.points.push_back(obstaclePoints[path[i]]);
     }
 }
@@ -325,7 +324,7 @@ int main(int argc,char** argv)
     //algprithm here
     double pathLength=0;
 
-    ros::Time startTime = ros::Time::now();
+    ros::Time time = ros::Time::now();
 
     lines = generateLines(obstaclePoints,sourceX,sourceY,goalX,goalY);
 
@@ -338,7 +337,22 @@ int main(int argc,char** argv)
     myDijkstra.getShortestPath(0,1,path);
 
     ros::Time endTime = ros::Time::now();
-    ROS_INFO("End, Total Time = %d, %d", ros::Time::now().sec - startTime.sec, ros::Time::now().nsec - startTime.nsec);
+    int nsec = endTime.nsec - time.nsec;
+    int sec = endTime.sec - time.sec;
+    if(nsec < 0)
+    {
+        sec -= 1;
+        nsec += 1000000000;
+    }
+    ROS_INFO("End, Total Time = %d, %d", sec, nsec);
+
+    float distance = 0;
+    /** path length */
+    for(int i=1; i< path.size(); i++)
+    {
+        distance += sqrt(pow(obstaclePoints[path[i-1]].x - obstaclePoints[path[i]].x,2)+pow(obstaclePoints[path[i-1]].y - obstaclePoints[path[i]].y,2));
+    }
+    ROS_INFO("Path Length %f", distance);
     allPathsMarker(lines,vgPathsMarker);
     finalPathMarker(obstaclePoints,path,finalPath);
     ros::Duration(1).sleep();

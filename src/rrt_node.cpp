@@ -201,14 +201,9 @@ int main(int argc,char** argv)
     goalPoint.pose.position.x = 95;
     goalPoint.pose.position.y = 95;
 
-//    rrt_publisher.publish(sourcePoint);
- //   rrt_publisher.publish(goalPoint);
- //   ros::spinOnce();
-  //  ros::Duration(0.01).sleep();
-
     srand (time(NULL));
-    //initialize rrt specific variables
 
+    //initialize rrt specific variables
     //initializing rrtTree
     RRT myRRT(2.0,2.0);
     int goalX, goalY;
@@ -250,16 +245,12 @@ int main(int argc,char** argv)
                 {
                     path = myRRT.getRootToEndPath(tempNode.nodeID);
                     rrtPaths.push_back(path);
-                    //std::cout<<"New Path Found. Total paths "<<rrtPaths.size()<<endl;
-                    //ros::Duration(10).sleep();
-                    //std::cout<<"got Root Path"<<endl;
                 }
             }
         }
         else //if(rrtPaths.size() >= rrtPathLimit)
         {
             status = success;
-            //std::cout<<"Finding Optimal Path"<<endl;
             for(int i=0; i<rrtPaths.size();i++)
             {
                 if(rrtPaths[i].size() < shortestPath)
@@ -269,13 +260,20 @@ int main(int argc,char** argv)
                 }
             }
             setFinalPathData(rrtPaths, myRRT, shortestPath, finalPath, goalX, goalY);
-            //rrt_publisher.publish(finalPath);
             break;
         }
 
     }
-    ROS_INFO("End, Total Time = %d, %d", ros::Time::now().sec - time.sec, ros::Time::now().nsec - time.nsec);
-    ros::Duration(0.1).sleep();
+    ros::Time endTime = ros::Time::now();
+    int nsec = endTime.nsec - time.nsec;
+    int sec = endTime.sec - time.sec;
+    if(nsec < 0)
+    {
+        sec -= 1;
+        nsec += 1000000000;
+    }
+    ROS_INFO("End, Total Time = %d, %d", sec, nsec);
+    ROS_INFO("PATH Size - %d", shortestPathLength);
     rrt_publisher.publish(sourcePoint);
     rrt_publisher.publish(goalPoint);
     rrt_publisher.publish(rrtTreeMarker);
