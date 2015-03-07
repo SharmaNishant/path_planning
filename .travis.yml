@@ -7,10 +7,10 @@ git:
 before_install:
   - sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu trusty main" > /etc/apt/sources.list.d/ros-latest.list'
   - wget https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -O - | sudo apt-key add -
+  - sudo apt-get install ros-indigo-desktop-full
   - sudo rosdep init
   - rosdep update
 install:
-  - sudo apt-get install ros-indigo-desktop-full
   - rosdep install --from-paths .. --ignore-src --rosdistro indigo
   - source /opt/ros/indigo/setup.bash
   - mkdir -p ~/catkin_ws/src && pushd ~/catkin_ws
