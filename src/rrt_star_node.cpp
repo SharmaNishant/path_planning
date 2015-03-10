@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <ros/console.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Point.h>
 #include <path_planning/rrt.h>
@@ -17,8 +18,11 @@
 using namespace rrt;
 
 bool status = running;
+    int goalX, goalY;
 
-double finalPathDistance =0;
+double finalPathDistance = 0;
+
+int kValue = 1;
 
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
@@ -119,33 +123,11 @@ bool checkIfOutsideObstacles(vector< vector<geometry_msgs::Point> > &obstArray, 
 
 void generateTempPoint(RRT::rrtNode &tempNode)
 {
-    int x = rand() % 150 + 1;
-    int y = rand() % 150 + 1;
+    int x = rand() % 100 + 1;
+    int y = rand() % 100 + 1;
     //std::cout<<"Random X: "<<x <<endl<<"Random Y: "<<y<<endl;
     tempNode.posX = x;
     tempNode.posY = y;
-}
-
-bool addNewPointtoRRT(RRT &myRRT, RRT::rrtNode &tempNode, int rrtStepSize, vector< vector<geometry_msgs::Point> > &obstArray)
-{
-    int nearestNodeID = myRRT.getNearestNodeID(tempNode.posX,tempNode.posY);
-
-    RRT::rrtNode nearestNode = myRRT.getNode(nearestNodeID);
-
-    double theta = atan2(tempNode.posY - nearestNode.posY,tempNode.posX - nearestNode.posX);
-
-    tempNode.posX = nearestNode.posX + (rrtStepSize * cos(theta));
-    tempNode.posY = nearestNode.posY + (rrtStepSize * sin(theta));
-
-    if(checkIfInsideBoundary(tempNode) && checkIfOutsideObstacles(obstArray,tempNode))
-    {
-        tempNode.parentID = nearestNodeID;
-        tempNode.nodeID = myRRT.getTreeSize();
-        myRRT.addNewNode(tempNode);
-        return true;
-    }
-    else
-        return false;
 }
 
 bool checkNodetoGoal(int X, int Y, RRT::rrtNode &tempNode)
@@ -156,6 +138,46 @@ bool checkNodetoGoal(int X, int Y, RRT::rrtNode &tempNode)
         return true;
     }
     return false;
+}
+
+bool addNewPointtoRRT(RRT &myRRT, RRT::rrtNode randPointNode, int rrtStepSize, vector< vector<geometry_msgs::Point> > &obstArray, visualization_msgs::Marker &rrtTreeMarker, vector< vector<int> > &rrtPaths)
+{
+    //ROS_INFO("Entering getKnearestNodes");
+    vector<int> nearestNodeID = myRRT.getKNearestNodesID(randPointNode.posX,randPointNode.posY, kValue);
+   // ROS_INFO("Exiting getKnearestNodes");
+    int i = 0;
+    RRT::rrtNode tempNode;
+    vector<int> path;
+    bool nodeToGoal = false;
+    while(i < kValue)
+    {
+        if(nearestNodeID[i] == -1) break;
+        RRT::rrtNode nearestNode = myRRT.getNode(nearestNodeID[i]);
+
+        double theta = atan2(randPointNode.posY - nearestNode.posY,randPointNode.posX - nearestNode.posX);
+
+        tempNode.posX = nearestNode.posX + (rrtStepSize * cos(theta));
+        tempNode.posY = nearestNode.posY + (rrtStepSize * sin(theta));
+
+        if(checkIfInsideBoundary(tempNode) && checkIfOutsideObstacles(obstArray,tempNode))
+        {
+            tempNode.parentID = nearestNodeID[i];
+            tempNode.nodeID = myRRT.getTreeSize();
+            myRRT.addNewNode(tempNode);
+
+            addBranchtoRRTTree(rrtTreeMarker,tempNode,myRRT);
+           // std::cout<<"tempnode printed"<<endl;
+            nodeToGoal = checkNodetoGoal(goalX, goalY,tempNode);
+            if(nodeToGoal)
+            {
+                path = myRRT.getRootToEndPath(tempNode.nodeID);
+                rrtPaths.push_back(path);
+            }
+        }
+        i++;
+        if(i >= nearestNodeID.size()) break;
+     }
+    return true;
 }
 
 void setFinalPathData(vector< vector<int> > &rrtPaths, RRT &myRRT, int i, visualization_msgs::Marker &finalpath, int goalX, int goalY)
@@ -277,25 +299,28 @@ int main(int argc,char** argv)
     //initialize rrt specific variables
     //initializing rrtTree
     RRT myRRT(2.0,2.0);
-    int goalX, goalY;
+
     goalX = goalY = 95;
 
     int rrtStepSize = 1;
 
     vector< vector<int> > rrtPaths;
-    vector<int> path;
+
     int rrtPathLimit;
 
+    cout<<"RRT min paths"<<endl;
     cin>>rrtPathLimit;
+    cout<<"k value"<<endl;
+    cin>>kValue;
 
     double shortestPathLength = 9999;
     int shortestPath = -1;
 
     RRT::rrtNode tempNode;
-
-    vector< vector<geometry_msgs::Point> >  obstacleList = getObstacles();
+    vector<RRT::rrtNode> tempNodeList;
     obstacles obstacle;
     vector < obstacleLine > obstacleLines = obstacle.getObstacleLines();
+    vector< vector<geometry_msgs::Point> >  obstacleList = getObstacles();
 
     bool addNodeResult = false, nodeToGoal = false;
 
@@ -305,21 +330,13 @@ int main(int argc,char** argv)
     {
         if(rrtPaths.size() < rrtPathLimit)
         {
+
             generateTempPoint(tempNode);
+
             //std::cout<<"tempnode generated"<<endl;
-            addNodeResult = addNewPointtoRRT(myRRT,tempNode,rrtStepSize,obstacleList);
-            if(addNodeResult)
-            {
-               // std::cout<<"tempnode accepted"<<endl;
-                addBranchtoRRTTree(rrtTreeMarker,tempNode,myRRT);
-               // std::cout<<"tempnode printed"<<endl;
-                nodeToGoal = checkNodetoGoal(goalX, goalY,tempNode);
-                if(nodeToGoal)
-                {
-                    path = myRRT.getRootToEndPath(tempNode.nodeID);
-                    rrtPaths.push_back(path);
-                }
-            }
+           // ROS_INFO("Entering add point to RRT");
+            addNewPointtoRRT(myRRT,tempNode,rrtStepSize,obstacleList,rrtTreeMarker,rrtPaths);
+            //ROS_INFO("Exiting add point to RRT");
         }
         else //if(rrtPaths.size() >= rrtPathLimit)
         {
@@ -336,7 +353,8 @@ int main(int argc,char** argv)
             pruningFinalPath(obstacleLines, finalPath);
             break;
         }
-
+            //rrt_publisher.publish(rrtTreeMarker);
+            //ros::Duration(0.1).sleep();
     }
     ros::Time endTime = ros::Time::now();
     int nsec = endTime.nsec - time.nsec;
@@ -348,6 +366,7 @@ int main(int argc,char** argv)
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
     ROS_INFO("PATH Size - %f", shortestPathLength);
+
 
     time = ros::Time::now();
     pruningFinalPath(obstacleLines,finalPath);
@@ -369,6 +388,7 @@ int main(int argc,char** argv)
     ROS_INFO("End, Total branches = %ld", rrtTreeMarker.points.size());
     rrt_publisher.publish(finalPath);
     ros::spinOnce();
-    ros::Duration(1).sleep();
+    ros::Duration(0.01).sleep();
 	return 1;
 }
+

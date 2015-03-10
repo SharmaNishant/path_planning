@@ -13,6 +13,8 @@ int sourceY =  2;
 int goalX   = 95;
 int goalY   = 95;
 
+double finalPathDistance = 0;
+
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
     visualization_msgs::Marker &pathMarker,
@@ -99,7 +101,7 @@ void calcFinalPath(LocationArray &locationList,visualization_msgs::Marker &final
     /** calculating path by traversing back **/
     int i=1;
     vector<location> loc = locationList.getLocationList();
-    ROS_INFO("Cost = %f",loc[1].getDistance());
+    ROS_INFO("Original Path Cost = %f",loc[1].getDistance());
     while(i != 0)
     {
         point.x = loc[i].getX();
@@ -411,6 +413,77 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
     }
 }
 
+bool getLineIntersections(float pointOneX, float pointOneY, float pointTwoX, float pointTwoY, vector < obstacleLine > &obstacleLines)
+{
+    float p0_x = pointOneX;
+    float p0_y = pointOneY;
+    float p1_x = pointTwoX;
+    float p1_y = pointTwoY;
+
+    float p2_x;
+    float p2_y;
+    float p3_x;
+    float p3_y;
+
+    float i_x,i_y;
+    vector<intersectingPoint> intersectingLinesID;
+
+    intersectingPoint iPoint;
+
+    for(int i=0; i< obstacleLines.size();i++)
+    {
+        p2_x = obstacleLines[i].point[0].x;
+        p2_y = obstacleLines[i].point[0].y;
+        p3_x = obstacleLines[i].point[1].x;
+        p3_y = obstacleLines[i].point[1].y;
+
+        float s1_x, s1_y, s2_x, s2_y;
+        s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
+        s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
+
+        float s, t;
+        s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+        t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+        if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+        {
+            // Collision detected
+            i_x = p0_x + (t * s1_x);
+            i_y = p0_y + (t * s1_y);
+
+            if(i_x == p0_x && i_y == p0_y) continue;
+            if(i_x == p1_x && i_y == p1_y) continue;
+
+            return true;
+        }
+    }
+    return false; // No collision
+}
+
+void pruningFinalPath(vector < obstacleLine > &obstacleLines, visualization_msgs::Marker &finalPath)
+{
+    vector< geometry_msgs::Point > prunedPath;
+     finalPathDistance = 0;
+    prunedPath.push_back(finalPath.points[0]);
+
+    bool intersectionResult = false;
+
+    for(int i=1;i<finalPath.points.size();i++)
+    {
+        intersectionResult = getLineIntersections(prunedPath[prunedPath.size() - 1].x,prunedPath[prunedPath.size() - 1].y, finalPath.points[i].x, finalPath.points[i].y,obstacleLines);
+        if(intersectionResult == true) //intersection detected
+        {
+            prunedPath.push_back(finalPath.points[i-1]);
+            finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+        }
+    }
+    prunedPath.push_back(finalPath.points[finalPath.points.size()-1]);
+    finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+    finalPath.points = prunedPath;
+    //ROS_INFO("Cost = %f",distance);
+}
+
+
 int main(int argc, char** argv)
 {
     //initializing ROS
@@ -516,6 +589,20 @@ int main(int argc, char** argv)
         nsec += 1000000000;
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
+
+    time = ros::Time::now();
+    pruningFinalPath(obstacleLines,finalPath);
+
+    endTime = ros::Time::now();
+     nsec = endTime.nsec - time.nsec;
+     sec = endTime.sec - time.sec;
+    if(nsec < 0)
+    {
+        sec -= 1;
+        nsec += 1000000000;
+    }
+    ROS_INFO("Pruning Time = %d, %d", sec, nsec);
+    ROS_INFO("COST %f", finalPathDistance);
     displayBugs(bugList,sourcePoint,bug_publisher);
     bug_publisher.publish(goalPoint);
     bug_publisher.publish(sourcePoint);
@@ -523,6 +610,7 @@ int main(int argc, char** argv)
     displayPaths(pathList, pathMarker, bug_publisher);
     //displayFinalPath(locationList, finalPath, bug_publisher);
     ros::Duration(1).sleep();
+
     ros::spinOnce();
     return 1;
 }

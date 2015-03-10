@@ -1,4 +1,5 @@
 #include <path_planning/rrt.h>
+#include <ros/ros.h>
 #include <math.h>
 #include <cstddef>
 #include <iostream>
@@ -111,6 +112,49 @@ int RRT::getNearestNodeID(double X, double Y)
         }
     }
     return returnID;
+}
+
+vector<int> RRT::getKNearestNodesID(double X, double Y, int k)
+{
+    int i, returnID;
+    double tempDistance;
+    vector<int> nodeIDList;
+    vector<double> distance;
+
+    for (int i=0;i<k;i++)
+    {
+        distance.push_back(9999);
+        nodeIDList.push_back(-1);
+    }
+    int j;
+    for(i=0; i<this->getTreeSize(); i++)
+    {
+        j=k-1;
+        tempDistance = getEuclideanDistance(X,Y, getPosX(i),getPosY(i));
+        while(j>=0)
+        {
+            //if(distance[j] < tempDistance) break;
+            if(j == 0 && distance[j] > tempDistance)
+            {
+                distance.insert(distance.begin(),tempDistance);
+                nodeIDList.insert(nodeIDList.begin(),i);
+                break;
+            }
+            if (tempDistance < distance[j] && tempDistance > distance[j-1])
+            {
+                distance.insert(distance.begin()+j,tempDistance);
+                nodeIDList.insert(nodeIDList.begin()+j,i);
+                break;
+            }
+            j--;
+        }
+        if(nodeIDList.size() > k)
+            nodeIDList.erase(nodeIDList.begin()+k,nodeIDList.end());
+        if(distance.size() > k)
+            distance.erase(distance.begin()+k,distance.end());
+    }
+    //ROS_INFO("Returing %ld nodes", nodeIDList.size());
+    return nodeIDList;
 }
 
 /**

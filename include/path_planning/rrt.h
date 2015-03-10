@@ -40,6 +40,7 @@ namespace rrt {
             int getChildrenSize(int nodeID);
 
             int getNearestNodeID(double X, double Y);
+            vector<int> getKNearestNodesID(double X, double Y, int k);
             vector<int> getRootToEndPath(int endNodeID);
 
         private:
