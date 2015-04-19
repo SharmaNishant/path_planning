@@ -120,7 +120,7 @@ Position getNewRandomStartPosition()
 {
     Position pos;
     pos.x = rand() % 10;
-    pos.y = rand() % 10;
+    pos.y = rand() % 100;
     return pos;
 }
 
@@ -128,7 +128,7 @@ Position getNewRandomEndPosition()
 {
     Position pos;
     pos.x = (rand() % 10) + 90;
-    pos.y = (rand() % 10) + 90;
+    pos.y = (rand() % 10);
     return pos;
 }
 
