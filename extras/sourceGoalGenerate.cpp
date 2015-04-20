@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cmath>
+#include <time.h>
 
 using namespace std;
 
@@ -150,6 +151,8 @@ int main(int passedArgumentCount,char** passedArgumentValues)
         cout<<"Out Filename not proper";
         return -1;
     }
+
+    srand(time(NULL));
 
     vector<Obstacle> obstacleArray = getObstaclesFromFile(passedArgumentValues[1]);
 

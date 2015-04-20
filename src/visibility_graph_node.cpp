@@ -15,10 +15,10 @@
 #define running true
 
 
-int sourceX =  2;
-int sourceY =  2;
-int goalX   = 95;
-int goalY   = 95;
+float sourceX ;
+float sourceY ;
+float goalX   ;
+float goalY   ;
 
 struct lineData
 {
@@ -288,6 +288,13 @@ void finalPathMarker(vector<geometry_msgs::Point> &obstaclePoints, vector<int> &
 
 int main(int argc,char** argv)
 {
+
+    if(argc != 3)// Check the value of passedArgumentCount. if filename is not passed
+    {
+        std::cout << "usage -> rosrun path_planning nodeName <filename1> <filename2>\n"; // Inform the user of how to use the program
+        exit(0);
+    }
+
     //initializing ROS
     ros::init(argc,argv,"vg_node");
 	ros::NodeHandle n;
@@ -303,16 +310,18 @@ int main(int argc,char** argv)
 
     initializeMarkers(sourcePoint, goalPoint, vgPathsMarker, finalPath);
 
-    //setting source and goal
-    sourcePoint.pose.position.x = 2;
-    sourcePoint.pose.position.y = 2;
+    readSourceGoalFromFile(argv[2],sourceX,sourceY,goalX,goalY);
 
-    goalPoint.pose.position.x = 95;
-    goalPoint.pose.position.y = 95;
+    //setting source and goal
+    sourcePoint.pose.position.x = sourceX;
+    sourcePoint.pose.position.y = sourceY;
+
+    goalPoint.pose.position.x = goalX;
+    goalPoint.pose.position.y = goalY;
 
     srand (time(NULL));
 
-    obstacles obst;
+    obstacles obst(argv[1]);
 
     vector< lineData > lines;
 

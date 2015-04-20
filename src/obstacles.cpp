@@ -23,12 +23,12 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 
-vector<obstacleDef> getObstaclesFromFile()
+vector<obstacleDef> getObstaclesFromFile(char* filename)
 {
     obstacleDef obstaclePoint;
     vector<obstacleDef> myObstacles;
     string line;
-    ifstream myfile ("obstacle.txt");
+    ifstream myfile (filename);
     if (myfile.is_open())
     {
     while ( getline (myfile,line) )
@@ -46,12 +46,12 @@ vector<obstacleDef> getObstaclesFromFile()
     return myObstacles;
 }
 
-obstacles::obstacles()
+obstacles::obstacles(char* filename)
 {
     vector<geometry_msgs::Point> obstaclePoint;
     geometry_msgs::Point point;
 
-    vector<obstacleDef> myObstacles = getObstaclesFromFile();
+    vector<obstacleDef> myObstacles = getObstaclesFromFile(filename);
 
     for(int i=0;i<myObstacles.size();i++)
     {
@@ -134,4 +134,28 @@ vector<geometry_msgs::Point> obstacles::getObstaclePoints()
         }
     }
     return obstaclePoints;
+}
+
+
+void readSourceGoalFromFile(char* filename, float &startX, float &startY, float &goalX, float &goalY)
+{
+    ifstream inFile;
+    inFile.open(filename);
+    string line;
+    if (inFile.is_open())
+    {
+        getline (inFile,line);
+        vector<string> temp = split(line,',');
+        startX = atof(temp[0].c_str());
+        startY = atof(temp[1].c_str());
+        //cout<< startX << " " << startY << endl;
+        getline (inFile,line);
+        temp = split(line,',');
+        goalX = atof(temp[0].c_str());
+        goalY = atof(temp[1].c_str());
+       // cout<<goalX<<" "<<goalY;
+        inFile.close();
+    }
+    else
+        cout << "Unable to open file";
 }

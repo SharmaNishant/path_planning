@@ -23,7 +23,7 @@ class obstacles
 {
     public:
         /** Default constructor */
-        obstacles();
+        obstacles(char* filename);
         /** Default destructor */
         virtual ~obstacles() {}
 
@@ -34,5 +34,7 @@ class obstacles
     private:
         vector< vector<geometry_msgs::Point> > obstacleArray;
 };
+
+void readSourceGoalFromFile(char* filename, float &startX, float &startY, float &goalX, float &goalY);
 
 #endif // OBSTACLES_H

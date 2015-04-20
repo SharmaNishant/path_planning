@@ -85,13 +85,13 @@ vector<geometry_msgs::Point> initializeBoundary()
     return bondArray;
 }
 
-vector<geometry_msgs::Point> initializeObstacles()
+vector<geometry_msgs::Point> initializeObstacles(char* filename)
 {
     vector< vector<geometry_msgs::Point> > obstArray;
 
     vector<geometry_msgs::Point> obstaclesMarker;
 
-    obstacles obst;
+    obstacles obst(filename);
 
     obstArray = obst.getObstacleArray();
 
@@ -122,13 +122,8 @@ int main(int argc,char** argv)
 
     initializeMarkers(boundary, obstacle);
 
-    //initializing rrtTree
-    RRT myRRT(2.0,2.0);
-    int goalX, goalY;
-    goalX = goalY = 95;
-
     boundary.points = initializeBoundary();
-    obstacle.points = initializeObstacles();
+    obstacle.points = initializeObstacles(argv[1]);
 
     env_publisher.publish(boundary);
     env_publisher.publish(obstacle);

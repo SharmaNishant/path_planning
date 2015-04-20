@@ -18,7 +18,7 @@
 using namespace rrt;
 
 bool status = running;
-    int goalX, goalY;
+    float sourceX,sourceY, goalX, goalY;
 
 double finalPathDistance = 0;
 
@@ -71,9 +71,9 @@ void initializeMarkers(visualization_msgs::Marker &sourcePoint,
 	sourcePoint.color.a = goalPoint.color.a = randomPoint.color.a = rrtTreeMarker.color.a = finalPath.color.a = 1.0f;
 }
 
-vector< vector<geometry_msgs::Point> > getObstacles()
+vector< vector<geometry_msgs::Point> > getObstacles(char* filename)
 {
-    obstacles obst;
+    obstacles obst(filename);
     return obst.getObstacleArray();
 }
 
@@ -287,20 +287,19 @@ int main(int argc,char** argv)
 
     initializeMarkers(sourcePoint, goalPoint, randomPoint, rrtTreeMarker, finalPath);
 
+    readSourceGoalFromFile(argv[2],sourceX,sourceY,goalX,goalY);
     //setting source and goal
-    sourcePoint.pose.position.x = 2;
-    sourcePoint.pose.position.y = 2;
+    sourcePoint.pose.position.x = sourceX;
+    sourcePoint.pose.position.y = sourceY;
 
-    goalPoint.pose.position.x = 95;
-    goalPoint.pose.position.y = 95;
+    goalPoint.pose.position.x = goalX;
+    goalPoint.pose.position.y = goalY;
 
     srand (time(NULL));
 
     //initialize rrt specific variables
     //initializing rrtTree
-    RRT myRRT(2.0,2.0);
-
-    goalX = goalY = 95;
+    RRT myRRT(sourceX,sourceY);
 
     int rrtStepSize = 1;
 
@@ -318,9 +317,9 @@ int main(int argc,char** argv)
 
     RRT::rrtNode tempNode;
     vector<RRT::rrtNode> tempNodeList;
-    obstacles obstacle;
+    obstacles obstacle(argv[1]);
     vector < obstacleLine > obstacleLines = obstacle.getObstacleLines();
-    vector< vector<geometry_msgs::Point> >  obstacleList = getObstacles();
+    vector< vector<geometry_msgs::Point> >  obstacleList = getObstacles(argv[1]);
 
     bool addNodeResult = false, nodeToGoal = false;
 

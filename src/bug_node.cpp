@@ -5,15 +5,17 @@
 #include <path_planning/Vec2.h>
 #include <geometry_msgs/Point.h>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <cmath>
 
-int sourceX =  2;
-int sourceY =  2;
-int goalX   = 95;
-int goalY   = 95;
+float sourceX ;
+float sourceY ;
+float goalX   ;
+float goalY   ;
 
 double finalPathDistance = 0;
+double preFinalPathDistance = 0 ;
 
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
@@ -102,6 +104,7 @@ void calcFinalPath(LocationArray &locationList,visualization_msgs::Marker &final
     int i=1;
     vector<location> loc = locationList.getLocationList();
     ROS_INFO("Original Path Cost = %f",loc[1].getDistance());
+    preFinalPathDistance = loc[1].getDistance();
     while(i != 0)
     {
         point.x = loc[i].getX();
@@ -130,6 +133,7 @@ void boundaryFollow(vector<Bug> &bugList,int i, vector < obstacleLine > &obstacl
     /** bug is not clear to move **/
     if(bugList[i].checkInsideObstacles(obstArray, goalX, goalY))
     {
+    //cout<<bugList[i].getDistance()<<" "<<i<<endl;
         /** check which obstacle line can be followed **/
         int index;
         int line = bugList[i].checkIfOnOtherLines(obstacleLines, index);
@@ -225,7 +229,8 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
         bugList[i].setX(lineIds[intersectionPointID].x);
         bugList[i].setY(lineIds[intersectionPointID].y);
         bugList[i].addDistance(minDist);
-
+        //cout<<minDist<<" "<<i<<"\n";
+        //exit(1);
         point.x = bugList[i].getX();
         point.y = bugList[i].getY();
         point.z = 0;
@@ -274,7 +279,7 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
         /** changing state **/
         bugList[i].setBoundaryID(lineId);
         bugList[i].setState(boundaryFollowing);
-
+        //<<"nb"<<bugList[i].getDistance()<<" "<<i<<endl;
         Bug newTempBug(boundaryFollowing, lineIds[intersectionPointID].x, lineIds[intersectionPointID].y, bugList[i].getDistance(), bugList[i].getLastPointID(), bugList[i].getBoundaryID());
 
         bugList[i].setY(obstacleLines[lineId].point[1].y);
@@ -326,9 +331,11 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
 
 
         newTempBug.setBoundaryID(lineId);
+
+        float dist = newTempBug.getEuclideanDistance(newTempBug.getX(),newTempBug.getY(),obstacleLines[lineId].point[0].x,obstacleLines[lineId].point[0].y);
         newTempBug.setX(obstacleLines[lineId].point[0].x);
         newTempBug.setY(obstacleLines[lineId].point[0].y);
-        float dist = newTempBug.getEuclideanDistance(newTempBug.getX(),newTempBug.getY(),obstacleLines[lineId].point[0].x,obstacleLines[lineId].point[0].y);
+        //cout<< "dist "<< dist << endl;
         newTempBug.addDistance(dist);
 
         point.x = newTempBug.getX();
@@ -381,8 +388,11 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
         location loc;
         bugList[i].setState(reachedEnd);
         killFlag = true;
+        //cout<<"g "<<bugList[i].getDistance()<<" "<<i<<endl;
 
-        bugList[i].addDistance(bugList[i].getEuclideanDistance(bugList[i].getX(),bugList[i].getY(),goalX,goalY));
+        float distanceTemp = bugList[i].getEuclideanDistance(bugList[i].getX(),bugList[i].getY(),goalX,goalY);
+        bugList[i].addDistance(distanceTemp);
+        //cout<<"gp "<<bugList[i].getDistance()<<" "<<i<<endl;
 
         bugList[i].setX(goalX);
         bugList[i].setY(goalY);
@@ -404,6 +414,7 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
         loc.addBugtoList(bugList[i].getID());
 
         float prevDistanceToPoint = locationList.getDistance(1);
+
         if(prevDistanceToPoint > loc.getDistance())
         {
             locationList.updateLocation(1, loc, false);
@@ -451,8 +462,8 @@ bool getLineIntersections(float pointOneX, float pointOneY, float pointTwoX, flo
             i_x = p0_x + (t * s1_x);
             i_y = p0_y + (t * s1_y);
 
-            if(i_x == p0_x && i_y == p0_y) continue;
-            if(i_x == p1_x && i_y == p1_y) continue;
+            if(i_x == p2_x && i_y == p2_y) continue;
+            if(i_x == p3_x && i_y == p3_y) continue;
 
             return true;
         }
@@ -486,6 +497,14 @@ void pruningFinalPath(vector < obstacleLine > &obstacleLines, visualization_msgs
 
 int main(int argc, char** argv)
 {
+
+    if(argc != 3)// Check the value of passedArgumentCount. if filename is not passed
+    {
+        std::cout << "usage -> rosrun path_planning nodeName <filename1> <filename2>\n"; // Inform the user of how to use the program
+        exit(0);
+    }
+
+
     //initializing ROS
     ros::init(argc,argv,"bug_node");
 	ros::NodeHandle n;
@@ -499,14 +518,16 @@ int main(int argc, char** argv)
     visualization_msgs::Marker pathMarker;
     visualization_msgs::Marker finalPath;
 
+    readSourceGoalFromFile(argv[2],sourceX,sourceY,goalX,goalY);
+    //cout<< sourceX<< " " << sourceY<< " " << goalX<< " " << goalY<< "\n";
     initializeMarkers(sourcePoint, goalPoint, pathMarker, finalPath);
 
-    goalPoint.pose.position.x = 95;
-    goalPoint.pose.position.y = 95;
+    goalPoint.pose.position.x = goalX;
+    goalPoint.pose.position.y = goalY;
 
     /** initializing bugs**/
     vector<Bug> bugList;
-    Bug mainBug(movingToGoal,0,0,0,0,-1);
+    Bug mainBug(movingToGoal,sourceX,sourceY,0,0,-1);
     bugList.push_back(mainBug);
 
     LocationArray locationList;
@@ -518,7 +539,7 @@ int main(int argc, char** argv)
 
     vector< geometry_msgs::Point > pathList;
 
-    obstacles obstacle;
+    obstacles obstacle(argv[1]);
     vector < obstacleLine > obstacleLines = obstacle.getObstacleLines();
     vector< vector<geometry_msgs::Point> > obstacleList = obstacle.getObstacleArray();
 
@@ -560,9 +581,11 @@ int main(int argc, char** argv)
 
         for(int i=0;i<bugList.size();i++)
         {
+            //cout<<endl;
             if(bugList[i].getState() == movingToGoal)
             {
                 bool killFlag;
+                //cout<<"mg"<<bugList[i].getDistance()<<" "<<i<<endl;
                 moveToGoal(bugList,i,obstacleLines,obstacleList,pathList,locationList, killFlag);
                 if(killFlag)
                 {
@@ -572,6 +595,7 @@ int main(int argc, char** argv)
             else if(bugList[i].getState() == boundaryFollowing)
             {
                 bool killFlag;
+                //cout<<"bf"<<bugList[i].getDistance()<<" "<<i<<endl;
                 boundaryFollow(bugList,i,obstacleLines,obstacleList, pathList,locationList, killFlag);
                 if(killFlag)
                 {
@@ -589,7 +613,7 @@ int main(int argc, char** argv)
         nsec += 1000000000;
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
-
+    double mainTime = sec + (nsec / 1000000000.0);
     time = ros::Time::now();
     pruningFinalPath(obstacleLines,finalPath);
 
@@ -602,15 +626,22 @@ int main(int argc, char** argv)
         nsec += 1000000000;
     }
     ROS_INFO("Pruning Time = %d, %d", sec, nsec);
+    double prunTime = sec + (nsec / 1000000000.0);
     ROS_INFO("COST %f", finalPathDistance);
     displayBugs(bugList,sourcePoint,bug_publisher);
     bug_publisher.publish(goalPoint);
     bug_publisher.publish(sourcePoint);
-    bug_publisher.publish(finalPath);
     displayPaths(pathList, pathMarker, bug_publisher);
+    bug_publisher.publish(finalPath);
     //displayFinalPath(locationList, finalPath, bug_publisher);
     ros::Duration(1).sleep();
-
     ros::spinOnce();
+    ofstream logFile;
+    logFile.open("bugLog.txt",ofstream::app);
+
+    logFile << preFinalPathDistance << "," << finalPathDistance << "," << mainTime << "," << prunTime << endl;
+
+    logFile.close();
+
     return 1;
 }

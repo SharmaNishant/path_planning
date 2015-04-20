@@ -7,8 +7,8 @@ Bug::Bug(State state, float x, float y, float dist, int lastPTID, int boundID)
 	this->x = x;
 	this->y = y;
     this->ID = Bug::bugIDCounter++;
-    this->lastX = -1;
-    this->lastY = -1;
+    this->lastX = x;
+    this->lastY = y;
     this->lastPointID = lastPTID;
     this->boundaryID = dist;
     this->distance = dist;
