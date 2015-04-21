@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <vector>
 #include <time.h>
+#include <fstream>
 
 #define success false
 #define running true
@@ -286,9 +287,9 @@ int main(int argc,char** argv)
 
     vector< vector<int> > rrtPaths;
     vector<int> path;
-    int rrtPathLimit;
+    int rrtPathLimit = 1;
 
-    cin>>rrtPathLimit;
+    //cin>>rrtPathLimit;
 
     double shortestPathLength = 9999;
     int shortestPath = -1;
@@ -350,6 +351,7 @@ int main(int argc,char** argv)
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
     ROS_INFO("PATH Size - %f", shortestPathLength);
+        double mainTime = sec + (nsec / 1000000000.0);
 
     time = ros::Time::now();
     pruningFinalPath(obstacleLines,finalPath);
@@ -364,6 +366,7 @@ int main(int argc,char** argv)
     }
     ROS_INFO("Pruning Time = %d, %d", sec, nsec);
     ROS_INFO("COST %f", finalPathDistance);
+    double prunTime = sec + (nsec / 1000000000.0);
 
     rrt_publisher.publish(sourcePoint);
     rrt_publisher.publish(goalPoint);
@@ -372,5 +375,9 @@ int main(int argc,char** argv)
     rrt_publisher.publish(finalPath);
     ros::spinOnce();
     ros::Duration(1).sleep();
+    ofstream logFile;
+    logFile.open("rrtLog.txt",ofstream::app);
+    logFile << shortestPathLength << ","<< finalPathDistance << ","<< mainTime << "," << prunTime << endl;
+    logFile.close();
 	return 1;
 }

@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <vector>
 #include <time.h>
+#include <fstream>
 
 #define success false
 #define running true
@@ -354,7 +355,7 @@ int main(int argc,char** argv)
         nsec += 1000000000;
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
-
+    double mainTime = sec + (nsec / 1000000000.0);
     float distance = 0;
     /** path length */
     for(int i=1; i< path.size(); i++)
@@ -372,5 +373,9 @@ int main(int argc,char** argv)
     vg_publisher.publish(finalPath);
     ros::spinOnce();
     ros::Duration(0.01).sleep();
+    ofstream logFile;
+    logFile.open("vgLog.txt",ofstream::app);
+    logFile << distance << "," << mainTime << endl;
+    logFile.close();
 	return 1;
 }

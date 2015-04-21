@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <vector>
 #include <time.h>
+#include <fstream>
 
 #define success false
 #define running true
@@ -22,7 +23,7 @@ bool status = running;
 
 double finalPathDistance = 0;
 
-int kValue = 1;
+int kValue = 3;
 
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
@@ -305,12 +306,12 @@ int main(int argc,char** argv)
 
     vector< vector<int> > rrtPaths;
 
-    int rrtPathLimit;
+    int rrtPathLimit = 1;
 
-    cout<<"RRT min paths"<<endl;
-    cin>>rrtPathLimit;
-    cout<<"k value"<<endl;
-    cin>>kValue;
+   //// cout<<"RRT min paths"<<endl;
+   //// cin>>rrtPathLimit;
+   // cout<<"k value"<<endl;
+    //cin>>kValue;
 
     double shortestPathLength = 9999;
     int shortestPath = -1;
@@ -365,7 +366,7 @@ int main(int argc,char** argv)
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
     ROS_INFO("PATH Size - %f", shortestPathLength);
-
+double mainTime = sec + (nsec / 1000000000.0);
 
     time = ros::Time::now();
     pruningFinalPath(obstacleLines,finalPath);
@@ -380,6 +381,7 @@ int main(int argc,char** argv)
     }
     ROS_INFO("Pruning Time = %d, %d", sec, nsec);
     ROS_INFO("COST %f", finalPathDistance);
+    double prunTime = sec + (nsec / 1000000000.0);
 
     rrt_publisher.publish(sourcePoint);
     rrt_publisher.publish(goalPoint);
@@ -387,7 +389,10 @@ int main(int argc,char** argv)
     ROS_INFO("End, Total branches = %ld", rrtTreeMarker.points.size());
     rrt_publisher.publish(finalPath);
     ros::spinOnce();
-    ros::Duration(0.01).sleep();
-	return 1;
+    ros::Duration(1).sleep();
+    ofstream logFile;
+    logFile.open("rrtsLog.txt",ofstream::app);
+    logFile << shortestPathLength << ","<< finalPathDistance << ","<< mainTime << "," << prunTime << endl;
+    logFile.close();	return 1;
 }
 

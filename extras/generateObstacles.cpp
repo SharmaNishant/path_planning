@@ -28,7 +28,7 @@ vector<coordinates> Points;
 
 int main()
 {
-   int frameWidth =0,frameHeight = 0,obsNo = 250;
+   int frameWidth =0,frameHeight = 0,obsNo = 50;
     //cout<<"Enter the Width of frame : ";
     //cin>>frameWidth;
     //cout<<"Enter the Height of frame : ";
@@ -53,9 +53,10 @@ int main()
 
 	Mat img = Mat::zeros(frameWidth,frameHeight,CV_8UC1);
 
-    for(int z = 1 ; z <= 10;z++)
+    for(int z = 1 ; z <= 100;z++)
     {
-        snprintf(sequence, 500, "/home/pbsujit/catkin_ws/src/path_planning/extras/250_obstacle/data_%d.txt", z);
+        Points.clear();
+        snprintf(sequence, 500, "/home/pbsujit/catkin_ws/src/path_planning/extras/50_obstacle/data_%d.txt", z);
         //cout<<sequence<<endl;
         ofstream fout(sequence);
         int i = 0;
@@ -66,8 +67,8 @@ int main()
             tempPoint.x = frameWidth * ((float)rand()/(float)RAND_MAX);
             tempPoint.y = frameHeight * ((float)rand()/(float)RAND_MAX);
 
-            tempPoint.height = 3 + maxHeight * ((float)rand()/(float)RAND_MAX);
-            tempPoint.width = 3 + maxWidth * ((float)rand()/(float)RAND_MAX);
+            tempPoint.height = 6 + maxHeight * ((float)rand()/(float)RAND_MAX);
+            tempPoint.width = 6 + maxWidth * ((float)rand()/(float)RAND_MAX);
 
             if((tempPoint.y + tempPoint.height) > frameHeight ||
                (tempPoint.x + tempPoint.width) > frameWidth);
@@ -133,9 +134,9 @@ int main()
 	}
 */
 
-	namedWindow("Res",0);
-	imshow("Res",img);
-	waitKey(0);
+//	namedWindow("Res",0);
+//	imshow("Res",img);
+//	waitKey(0);
 	return 0;
 }
 
