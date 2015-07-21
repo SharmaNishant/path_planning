@@ -377,5 +377,17 @@ int main(int argc,char** argv)
     logFile.open("vgLog.txt",ofstream::app);
     logFile << distance << "," << mainTime << endl;
     logFile.close();
+
+    vector< geometry_msgs::Point > myPath = finalPath.points;
+    //saving path
+    logFile.open("vgPath.txt",ofstream::app);
+
+    for(int i=0;i<myPath.size();i++)
+    {
+        logFile <<myPath[i].x<<","<<myPath[i].y<<endl;
+    }
+
+    logFile.close();
+
 	return 1;
 }

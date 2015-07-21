@@ -379,5 +379,18 @@ int main(int argc,char** argv)
     logFile.open("rrtLog.txt",ofstream::app);
     logFile << shortestPathLength << ","<< finalPathDistance << ","<< mainTime << "," << prunTime << endl;
     logFile.close();
+
+        vector< geometry_msgs::Point > myPath = finalPath.points;
+    //saving path
+    logFile.open("rrtPath.txt",ofstream::app);
+
+    for(int i=0;i<myPath.size();i++)
+    {
+        logFile <<myPath[i].x<<","<<myPath[i].y<<endl;
+    }
+
+    logFile.close();
+
+
 	return 1;
 }

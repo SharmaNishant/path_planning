@@ -393,6 +393,20 @@ double mainTime = sec + (nsec / 1000000000.0);
     ofstream logFile;
     logFile.open("rrtsLog.txt",ofstream::app);
     logFile << shortestPathLength << ","<< finalPathDistance << ","<< mainTime << "," << prunTime << endl;
-    logFile.close();	return 1;
+    logFile.close();
+
+        vector< geometry_msgs::Point > myPath = finalPath.points;
+    //saving path
+    logFile.open("rrtsPath.txt",ofstream::app);
+
+    for(int i=0;i<myPath.size();i++)
+    {
+        logFile <<myPath[i].x<<","<<myPath[i].y<<endl;
+    }
+
+    logFile.close();
+
+
+    return 1;
 }
 
