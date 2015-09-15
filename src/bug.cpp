@@ -10,7 +10,7 @@ Bug::Bug(State state, float x, float y, float dist, int lastPTID, int boundID)
     this->lastX = x;
     this->lastY = y;
     this->lastPointID = lastPTID;
-    this->boundaryID = dist;
+    this->boundaryID = boundID;
     this->distance = dist;
 }
 

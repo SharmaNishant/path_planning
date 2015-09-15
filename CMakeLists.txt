@@ -129,6 +129,21 @@ add_executable(rrt_star_node src/rrt_star_node.cpp)
 add_dependencies(rrt_star_node path_planning)
 target_link_libraries(rrt_star_node path_planning ${catkin_LIBRARIES} )
 
+#NC Obstacles EXE List
+add_executable(nc_env_node src/NCOPlotter.cpp
+        src/NCOReader.cpp
+)
+target_link_libraries(nc_env_node ${catkin_LIBRARIES} )
+
+add_executable(nc_bug_node
+        src/NCOReader.cpp
+        src/NCBug.cpp
+        src/NCBugLocation.cpp
+        src/NCBugNode.cpp
+        src/NCBugNodeMember.cpp
+)
+target_link_libraries(nc_bug_node ${catkin_LIBRARIES} )
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(path_planning_node path_planning_generate_messages_cpp)
