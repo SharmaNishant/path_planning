@@ -170,6 +170,9 @@ bool getLineIntersections(Point source, Point end, vector < NCOLine > &obstacleL
             if(i_x == p2_x && i_y == p2_y) continue;
             if(i_x == p3_x && i_y == p3_y) continue;
 
+            //if(i_x == p0_x && i_y == p0_y) continue;
+            //if(i_x == p1_x && i_y == p1_y) continue;
+
             return true;
         }
     }
@@ -181,23 +184,57 @@ bool getLineIntersections(Point source, Point end, vector < NCOLine > &obstacleL
  */
 void pruningFinalPath(vector < NCOLine > &obstacleLines, visualization_msgs::Marker &finalPath)
 {
+	//path is actually reversed and it will not give proper pruning this way so reveresering to tget pruning properly
+	reverse(finalPath.points.begin(),finalPath.points.end());
+
     vector< Point > prunedPath;
     finalPathDistance = 0;
     prunedPath.push_back(finalPath.points[0]);
 
+	cout<< finalPath.points[6].x << " - "<<finalPath.points[6].y<<endl;
+
     bool intersectionResult = false;
 
-    for(int i=1;i<finalPath.points.size();i++)
+//    for(int i=1;i<finalPath.points.size();i++)
+//    {
+//        intersectionResult = getLineIntersections(prunedPath[prunedPath.size() - 1], finalPath.points[i],obstacleLines);
+//        if(intersectionResult == true) //intersection detected
+//        {
+//            prunedPath.push_back(finalPath.points[i-1]);
+//            finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+//        }
+//    }
+//    prunedPath.push_back(finalPath.points[finalPath.points.size()-1]);
+//    finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+
+    int i=0;
+	int j;
+	int lastIntersection = 1;
+    while (i < finalPath.points.size()-1)
     {
-        intersectionResult = getLineIntersections(prunedPath[prunedPath.size() - 1], finalPath.points[i],obstacleLines);
-        if(intersectionResult == true) //intersection detected
+		lastIntersection = i+1;
+        for(j=i+2;j<finalPath.points.size();j++)
         {
-            prunedPath.push_back(finalPath.points[i-1]);
-            finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+            intersectionResult = getLineIntersections(prunedPath[prunedPath.size() - 1], finalPath.points[j],obstacleLines);
+            if(intersectionResult == false) //intersection not detected
+            {
+             	lastIntersection = j;
+				cout<<"wow i "<<i<<" wow j "<<j<<endl;
+            }
         }
-    }
-    prunedPath.push_back(finalPath.points[finalPath.points.size()-1]);
-    finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+		i = lastIntersection;
+		cout<<"i is "<<i<<" given overall size "<<finalPath.points.size()<<endl;
+		//if(i>=7) break;
+		prunedPath.push_back(finalPath.points[i]);
+		finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
+	}
+	if(i == (finalPath.points.size()-2))
+	{
+		prunedPath.push_back(finalPath.points[finalPath.points.size() - 1]);
+		finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x, 2) +
+								  pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y, 2));
+	}
+
     finalPath.points = prunedPath;
     //ROS_INFO("Cost = %f",distance);
 }
@@ -312,27 +349,28 @@ int main(int argc, char** argv)
         nsec += 1000000000;
     }
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
-//    double mainTime = sec + (nsec / 1000000000.0);
-//    time = ros::Time::now();
-//    pruningFinalPath(obstacleLines,finalPath);
-//
-//    endTime = ros::Time::now();
-//    nsec = endTime.nsec - time.nsec;
-//    sec = endTime.sec - time.sec;
-//    if(nsec < 0)
-//    {
-//        sec -= 1;
-//        nsec += 1000000000;
-//    }
-//    ROS_INFO("Pruning Time = %d, %d", sec, nsec);
-//    double prunTime = sec + (nsec / 1000000000.0);
-//    ROS_INFO("COST %f", finalPathDistance);
+    double mainTime = sec + (nsec / 1000000000.0);
+    time = ros::Time::now();
+    pruningFinalPath(obstacleLines,finalPath);
+
+    endTime = ros::Time::now();
+    nsec = endTime.nsec - time.nsec;
+    sec = endTime.sec - time.sec;
+    if(nsec < 0)
+    {
+        sec -= 1;
+        nsec += 1000000000;
+    }
+    ROS_INFO("Pruning Time = %d, %d", sec, nsec);
+    double prunTime = sec + (nsec / 1000000000.0);
+    ROS_INFO("COST %f", finalPathDistance);
     displayBugs(source, bugList,sourcePoint,bug_publisher);
     bug_publisher.publish(goalPoint);
     bug_publisher.publish(sourcePoint);
     displayPaths(pathList, pathMarker, bug_publisher);
-    bug_publisher.publish(finalPath);
-    //displayFinalPath(locationList, finalPath, bug_publisher);
+    //final path
+	bug_publisher.publish(finalPath);
+    //calcFinalPath(source, locationList, finalPath, bug_publisher);
     ros::Duration(1).sleep();
     ros::spinOnce();
     ofstream logFile;
