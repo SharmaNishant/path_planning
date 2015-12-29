@@ -278,7 +278,7 @@ int main(int argc,char** argv)
 
 	//defining Publisher
 	ros::Publisher rrt_publisher = n.advertise<visualization_msgs::Marker>("path_planner_rrt",1);
-
+    ros::Duration(3).sleep();
 	//defining markers
     visualization_msgs::Marker sourcePoint;
     visualization_msgs::Marker goalPoint;
@@ -354,7 +354,7 @@ int main(int argc,char** argv)
             break;
         }
             //rrt_publisher.publish(rrtTreeMarker);
-            //ros::Duration(0.1).sleep();
+            //ros::Duration(0.01).sleep();
     }
     ros::Time endTime = ros::Time::now();
     int nsec = endTime.nsec - time.nsec;

@@ -17,6 +17,8 @@ float goalY   ;
 double finalPathDistance = 0;
 double preFinalPathDistance = 0 ;
 
+typedef geometry_msgs::Point Position;
+
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
     visualization_msgs::Marker &goalPoint,
     visualization_msgs::Marker &pathMarker,
@@ -424,6 +426,125 @@ void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLi
     }
 }
 
+float GetEuclideanDistance(Position one, Position two)
+{
+    return sqrt( pow( one.x - two.x ,2) + pow( one.y - two.y  ,2) );
+}
+
+float GetAngle(Position destination, Position source)
+{
+    return atan2(destination.y - source.y , destination.x - source.x);
+}
+
+
+void getPerpendicularLineIntersection(Position linePointOne, Position linePointTwo, Position robotLocation, Position &intersectionPoint)
+{
+    // first convert line to normalized unit vector
+    double dx = linePointTwo.x - linePointOne.x;
+    double dy = linePointTwo.y - linePointOne.y;
+    double mag = sqrt(dx*dx + dy*dy);
+    dx /= mag;
+    dy /= mag;
+
+    // translate the point and get the dot product
+    double lambda = (dx * (robotLocation.x - linePointOne.x)) + (dy * (robotLocation.y - linePointOne.y));
+    intersectionPoint.x = (dx * lambda) + linePointOne.x;
+    intersectionPoint.y = (dy * lambda) + linePointOne.y;
+}
+
+
+
+bool updateCarrotWhenMovingOnLine(Position lineStart, Position lineEnd, Position rabbit, Position &carrot)
+{
+    bool isIncrement = false;
+
+    /** get robot projection on the current line that is being followed **/
+    Position robotLineIntersectionPoint;
+    getPerpendicularLineIntersection(lineStart, lineEnd, rabbit, robotLineIntersectionPoint);
+
+    //cout<<robotLineIntersectionPoint.x<<" : "<<robotLineIntersectionPoint.y<<endl;
+    //exit(2);
+
+    /** place carrot a fixed distance ahead of robot on that line **/
+    float carrotHeadingAngle = GetAngle(lineEnd, lineStart);
+    //cout<<carrotHeadingAngle*180/M_PI<<endl;
+    //exit(1);
+    Position carrotNewPosition;
+    carrotNewPosition.x = robotLineIntersectionPoint.x + ((5) * cos(carrotHeadingAngle));
+    carrotNewPosition.y = robotLineIntersectionPoint.y + ((5) * sin(carrotHeadingAngle));
+
+    /** check if carrot is still on the line segment or not **/
+    float carrotToLastWaypointDistance, intersectionToLastWaypointDistance;
+    carrotToLastWaypointDistance  = GetEuclideanDistance(carrotNewPosition, lineStart);
+    intersectionToLastWaypointDistance = GetEuclideanDistance(lineStart, lineEnd);
+
+    /** if carrot is crossing the line segment
+            then carrot location is waypoint value and carrot state is reached waypoint
+        else
+            carrot location is the new carrot location
+    **/
+    if (carrotToLastWaypointDistance > intersectionToLastWaypointDistance)
+    {
+        carrot = lineEnd;
+        isIncrement = true;
+    }
+    else
+    {
+        carrot = carrotNewPosition;
+    }
+    return isIncrement;
+}
+
+void updateRabbit(Position &rabbit, Position carrot)
+{
+    /** update  **/
+    float headingAngle = GetAngle(carrot, rabbit);
+    rabbit.x = rabbit.x + ((0.5) * cos(headingAngle));
+    rabbit.y = rabbit.y + ((0.5) * sin(headingAngle));
+//    cout<<rabbit.x<<" : "<<rabbit.y<<endl;
+//    cout<<carrot.x<<" : "<<carrot.y<<endl<<endl;
+}
+
+void purneRabbitCarrot(visualization_msgs::Marker &finalPath)
+{
+    vector< geometry_msgs::Point > bugPath;
+    /**
+        Final path was reversed. Reversing it back to make it from source to goal;
+    */
+    int i;
+    for(i=finalPath.points.size()-1;i>=0;i--)
+    {
+        bugPath.push_back(finalPath.points[i]);
+    }
+
+    vector< geometry_msgs::Point > path;
+
+    /** Rabbit's start point is source and then pushing start point to the new path */
+    Position rabbit = bugPath[0];
+    path.push_back(rabbit);
+
+    Position carrot;
+    bool changeLine = false;
+    i = 1;
+
+    /** loop to traverse from source to dest and generate path according to carrot-following algorithm*/
+    while(i<bugPath.size())
+    {
+       // cout<<bugPath[i-1].x<<" : "<<bugPath[i-1].y<<endl;
+        //cout<<bugPath[i].x<<" : "<<bugPath[i].y<<endl;
+        changeLine = updateCarrotWhenMovingOnLine(bugPath[i-1],bugPath[i],rabbit,carrot);
+        updateRabbit(rabbit,carrot);
+        path.push_back(rabbit);
+        if(changeLine)
+        {
+            i++;
+            //cout<<"Updating i "<<i<<endl;
+        }
+    }
+    path.push_back(bugPath[bugPath.size()-1]);
+    finalPath.points = path;
+}
+
 bool getLineIntersections(float pointOneX, float pointOneY, float pointTwoX, float pointTwoY, vector < obstacleLine > &obstacleLines)
 {
     float p0_x = pointOneX;
@@ -564,9 +685,9 @@ int main(int argc, char** argv)
 //
     while(ros::ok())
     {
-        displayBugs(bugList,sourcePoint,bug_publisher);
-        displayPaths(pathList, pathMarker, bug_publisher);
-        ros::Duration(0.25).sleep();
+        //displayBugs(bugList,sourcePoint,bug_publisher);
+        //displayPaths(pathList, pathMarker, bug_publisher);
+        //ros::Duration(0.25).sleep();
         for(int i= 0;i < bugList.size();)
         {
 
@@ -632,7 +753,7 @@ int main(int argc, char** argv)
     ROS_INFO("End, Total Time = %d, %d", sec, nsec);
     double mainTime = sec + (nsec / 1000000000.0);
     time = ros::Time::now();
-    pruningFinalPath(obstacleLines,finalPath);
+    //pruningFinalPath(obstacleLines,finalPath);
 
     endTime = ros::Time::now();
      nsec = endTime.nsec - time.nsec;
@@ -645,10 +766,14 @@ int main(int argc, char** argv)
     ROS_INFO("Pruning Time = %d, %d", sec, nsec);
     double prunTime = sec + (nsec / 1000000000.0);
     ROS_INFO("COST %f", finalPathDistance);
-    displayBugs(bugList,sourcePoint,bug_publisher);
+    //displayBugs(bugList,sourcePoint,bug_publisher);
     bug_publisher.publish(goalPoint);
     bug_publisher.publish(sourcePoint);
-    displayPaths(pathList, pathMarker, bug_publisher);
+    bug_publisher.publish(sPoint);
+    //displayPaths(pathList, pathMarker, bug_publisher);
+    bug_publisher.publish(finalPath);
+    ros::Duration(1).sleep();
+    purneRabbitCarrot(finalPath);
     bug_publisher.publish(finalPath);
     //displayFinalPath(locationList, finalPath, bug_publisher);
     ros::Duration(1).sleep();

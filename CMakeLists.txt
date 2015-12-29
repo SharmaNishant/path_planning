@@ -129,6 +129,12 @@ add_executable(rrt_star_node src/rrt_star_node.cpp)
 add_dependencies(rrt_star_node path_planning)
 target_link_libraries(rrt_star_node path_planning ${catkin_LIBRARIES} )
 
+#kinametic bug
+add_executable(k_bug_node src/k_bug_node.cpp)
+add_dependencies(k_bug_node path_planning)
+target_link_libraries(k_bug_node path_planning ${catkin_LIBRARIES} )
+
+
 #NC Obstacles EXE List
 add_executable(nc_env_node src/NCOPlotter.cpp
         src/NCOReader.cpp

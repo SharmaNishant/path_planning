@@ -300,6 +300,7 @@ int main(int argc, char** argv)
     while(ros::ok())
     {
         displayBugs(source,bugList,sourcePoint,bug_publisher);
+         displayPaths(pathList, pathMarker, bug_publisher);
         ros::Duration(0.025).sleep();
         //remove all the bugs that are on goal or are killed
         //clear the kill list

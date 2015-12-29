@@ -303,6 +303,8 @@ int main(int argc,char** argv)
 	//defining Publisher
 	ros::Publisher vg_publisher = n.advertise<visualization_msgs::Marker>("path_planner_vg",1);
 
+    ros::Duration(3).sleep();
+
 	//defining markers
     visualization_msgs::Marker sourcePoint;
     visualization_msgs::Marker goalPoint;
@@ -319,6 +321,9 @@ int main(int argc,char** argv)
 
     goalPoint.pose.position.x = goalX;
     goalPoint.pose.position.y = goalY;
+
+    vg_publisher.publish(sourcePoint);
+    vg_publisher.publish(goalPoint);
 
     srand (time(NULL));
 
