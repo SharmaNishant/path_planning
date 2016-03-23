@@ -3,13 +3,14 @@ INC_DIR = ./
 CXXFLAGS=-std=c++11 -I$(INC_DIR)
 CXXFLAGS += `pkg-config --cflags opencv` `pkg-config --libs opencv`
 LIBS = `pkg-config --libs opencv`
-OBJ = NCOGenerator.o
+
+OBJ = generateObstacles.o
 
 #%.o: %.c $(DEPS)
 %.o: %.c
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
-NCOGenerator: $(OBJ)
+ObsGenerator: $(OBJ)
 	$(CXX) -o $@ $^ $(CXXFLAGS)
 	rm -f *.o *~ core
 
