@@ -301,7 +301,7 @@ int main(int argc, char** argv)
     {
         displayBugs(source,bugList,sourcePoint,bug_publisher);
          displayPaths(pathList, pathMarker, bug_publisher);
-        ros::Duration(0.025).sleep();
+        ros::Duration(0.1).sleep();
         //remove all the bugs that are on goal or are killed
         //clear the kill list
         removeKilledBugs(bugList,idsToRemove);
