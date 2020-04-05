@@ -3,10 +3,10 @@
 #do
 #   echo $i
 # i=30
-#   rosrun path_planning bug_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt    
-#   rosrun path_planning vg_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt  
-#   rosrun path_planning rrt_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt  
-#   rosrun path_planning rrt_star_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt  
+#   rosrun path_planning bug_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt
+#   rosrun path_planning vg_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt
+#   rosrun path_planning rrt_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt
+#   rosrun path_planning rrt_star_node ~/catkin_ws/src/path_planning/extras/10_obstacle/data_$i.txt ~/catkin_ws/src/path_planning/extras/10_obstacle/sorGoal_$i.txt
 #done
 
 #for (( i=1; i<=100; i++ ))

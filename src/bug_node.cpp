@@ -1,675 +1,660 @@
-#include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
-#include <path_planning/obstacles.h>
-#include <path_planning/Bug.h>
-#include <path_planning/Vec2.h>
+#include <cmath>
+#include <fstream>
 #include <geometry_msgs/Point.h>
 #include <iostream>
-#include <fstream>
+#include <path_planning/Bug.h>
+#include <path_planning/Vec2.h>
+#include <path_planning/obstacles.h>
+#include <ros/ros.h>
 #include <vector>
-#include <cmath>
+#include <visualization_msgs/Marker.h>
 
-float sourceX ;
-float sourceY ;
-float goalX   ;
-float goalY   ;
+float sourceX;
+float sourceY;
+float goalX;
+float goalY;
 
 double finalPathDistance = 0;
-double preFinalPathDistance = 0 ;
+double preFinalPathDistance = 0;
 
 void initializeMarkers(visualization_msgs::Marker &sourcePoint,
-    visualization_msgs::Marker &goalPoint,
-    visualization_msgs::Marker &pathMarker,
-    visualization_msgs::Marker &finalPath)
-{
-    //init headers
-	sourcePoint.header.frame_id    = goalPoint.header.frame_id    = pathMarker.header.frame_id    = finalPath.header.frame_id    = "path_planner";
-	sourcePoint.header.stamp       = goalPoint.header.stamp       = pathMarker.header.stamp       = finalPath.header.stamp       = ros::Time::now();
-	sourcePoint.ns                 = goalPoint.ns                 = pathMarker.ns                 = finalPath.ns                 = "path_planner";
-	sourcePoint.action             = goalPoint.action             = pathMarker.action             = finalPath.action             = visualization_msgs::Marker::ADD;
-	sourcePoint.pose.orientation.w = goalPoint.pose.orientation.w = pathMarker.pose.orientation.w = finalPath.pose.orientation.w = 1.0;
+                       visualization_msgs::Marker &goalPoint,
+                       visualization_msgs::Marker &pathMarker,
+                       visualization_msgs::Marker &finalPath) {
+  // init headers
+  sourcePoint.header.frame_id = goalPoint.header.frame_id =
+      pathMarker.header.frame_id = finalPath.header.frame_id = "path_planner";
+  sourcePoint.header.stamp = goalPoint.header.stamp = pathMarker.header.stamp =
+      finalPath.header.stamp = ros::Time::now();
+  sourcePoint.ns = goalPoint.ns = pathMarker.ns = finalPath.ns = "path_planner";
+  sourcePoint.action = goalPoint.action = pathMarker.action = finalPath.action =
+      visualization_msgs::Marker::ADD;
+  sourcePoint.pose.orientation.w = goalPoint.pose.orientation.w =
+      pathMarker.pose.orientation.w = finalPath.pose.orientation.w = 1.0;
 
-    //setting id for each marker
-    sourcePoint.id    = 0;
-	goalPoint.id      = 1;
-	pathMarker.id  = 3;
-    finalPath.id      = 4;
+  // setting id for each marker
+  sourcePoint.id = 0;
+  goalPoint.id = 1;
+  pathMarker.id = 3;
+  finalPath.id = 4;
 
-	//defining types
-	pathMarker.type                                    = visualization_msgs::Marker::LINE_LIST;
-	finalPath.type                                        = visualization_msgs::Marker::LINE_STRIP;
-	sourcePoint.type  = visualization_msgs::Marker::POINTS;
-	goalPoint.type = visualization_msgs::Marker::SPHERE;
+  // defining types
+  pathMarker.type = visualization_msgs::Marker::LINE_LIST;
+  finalPath.type = visualization_msgs::Marker::LINE_STRIP;
+  sourcePoint.type = visualization_msgs::Marker::POINTS;
+  goalPoint.type = visualization_msgs::Marker::SPHERE;
 
-	//setting scale
-	pathMarker.scale.x = 0.2;
-	finalPath.scale.x     = 1;
-	sourcePoint.scale.x   = goalPoint.scale.x = 2;
-    sourcePoint.scale.y   = goalPoint.scale.y = 2;
-    sourcePoint.scale.z   = goalPoint.scale.z = 1;
+  // setting scale
+  pathMarker.scale.x = 0.2;
+  finalPath.scale.x = 1;
+  sourcePoint.scale.x = goalPoint.scale.x = 2;
+  sourcePoint.scale.y = goalPoint.scale.y = 2;
+  sourcePoint.scale.z = goalPoint.scale.z = 1;
 
-    //assigning colors
-	sourcePoint.color.r   = 1.0f;
-	goalPoint.color.g     = 1.0f;
+  // assigning colors
+  sourcePoint.color.r = 1.0f;
+  goalPoint.color.g = 1.0f;
 
-	pathMarker.color.r = 0.8f;
-	pathMarker.color.g = 0.4f;
+  pathMarker.color.r = 0.8f;
+  pathMarker.color.g = 0.4f;
 
-	finalPath.color.r = 0.2f;
-	finalPath.color.g = 0.2f;
-	finalPath.color.b = 1.0f;
+  finalPath.color.r = 0.2f;
+  finalPath.color.g = 0.2f;
+  finalPath.color.b = 1.0f;
 
-	sourcePoint.color.a = goalPoint.color.a = pathMarker.color.a = finalPath.color.a = 1.0f;
+  sourcePoint.color.a = goalPoint.color.a = pathMarker.color.a =
+      finalPath.color.a = 1.0f;
 }
 
-void displayBugs(vector<Bug> &bugList, visualization_msgs::Marker &sourcePoint, ros::Publisher &bug_publisher)
-{
-    vector < geometry_msgs::Point> points;
-    geometry_msgs::Point point;
+void displayBugs(vector<Bug> &bugList, visualization_msgs::Marker &sourcePoint,
+                 ros::Publisher &bug_publisher) {
+  vector<geometry_msgs::Point> points;
+  geometry_msgs::Point point;
 
-    /** adding Source to visual bug list **/
-    point.x = sourceX;
-    point.y = sourceY;
+  /** adding Source to visual bug list **/
+  point.x = sourceX;
+  point.y = sourceY;
+  point.z = 0;
+  points.push_back(point);
+
+  /** adding bugs to list
+   * this loop only matters if function called during run
+   */
+  for (int i = 0; i < bugList.size(); i++) {
+    point.x = bugList[i].getX();
+    point.y = bugList[i].getY();
     point.z = 0;
     points.push_back(point);
-
-    /** adding bugs to list
-    * this loop only matters if function called during run
-    */
-    for(int i=0;i<bugList.size();i++)
-    {
-        point.x = bugList[i].getX();
-        point.y = bugList[i].getY();
-        point.z = 0;
-        points.push_back(point);
-    }
-    /** publish **/
-    sourcePoint.points = points;
-    bug_publisher.publish(sourcePoint);
+  }
+  /** publish **/
+  sourcePoint.points = points;
+  bug_publisher.publish(sourcePoint);
 }
 
-void displayPaths(vector< geometry_msgs::Point > &points,visualization_msgs::Marker &pathMarker,ros::Publisher &bug_publisher)
-{
-    pathMarker.points = points;
-    bug_publisher.publish(pathMarker);
+void displayPaths(vector<geometry_msgs::Point> &points,
+                  visualization_msgs::Marker &pathMarker,
+                  ros::Publisher &bug_publisher) {
+  pathMarker.points = points;
+  bug_publisher.publish(pathMarker);
 }
 
-void calcFinalPath(LocationArray &locationList,visualization_msgs::Marker &finalPath,ros::Publisher &bug_publisher)
-{
-    /** defining points array for final path **/
-    vector< geometry_msgs::Point > points;
-    geometry_msgs::Point point;
+void calcFinalPath(LocationArray &locationList,
+                   visualization_msgs::Marker &finalPath,
+                   ros::Publisher &bug_publisher) {
+  /** defining points array for final path **/
+  vector<geometry_msgs::Point> points;
+  geometry_msgs::Point point;
 
-    /** calculating path by traversing back **/
-    int i=1;
-    vector<location> loc = locationList.getLocationList();
-    ROS_INFO("Original Path Cost = %f",loc[1].getDistance());
-    preFinalPathDistance = loc[1].getDistance();
-    while(i != 0)
-    {
-        point.x = loc[i].getX();
-        point.y = loc[i].getY();
-        points.push_back(point);
-        i = loc[i].getPrevNode();
-    }
-    /** adding Source to final path list **/
-    point.x = sourceX;
-    point.y = sourceY;
+  /** calculating path by traversing back **/
+  int i = 1;
+  vector<location> loc = locationList.getLocationList();
+  ROS_INFO("Original Path Cost = %f", loc[1].getDistance());
+  preFinalPathDistance = loc[1].getDistance();
+  while (i != 0) {
+    point.x = loc[i].getX();
+    point.y = loc[i].getY();
     points.push_back(point);
+    i = loc[i].getPrevNode();
+  }
+  /** adding Source to final path list **/
+  point.x = sourceX;
+  point.y = sourceY;
+  points.push_back(point);
 
-    finalPath.points = points;
-//    bug_publisher.publish(finalPath);
+  finalPath.points = points;
+  //    bug_publisher.publish(finalPath);
 }
 
-void boundaryFollow(vector<Bug> &bugList,int i, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstArray,
-            vector< geometry_msgs::Point > &pathList, LocationArray &locationList, bool &killFlag)
-{
-    /** defining values **/
-    geometry_msgs::Point point;
-    killFlag = false;
-    location loc;
+void boundaryFollow(vector<Bug> &bugList, int i,
+                    vector<obstacleLine> &obstacleLines,
+                    vector<vector<geometry_msgs::Point>> &obstArray,
+                    vector<geometry_msgs::Point> &pathList,
+                    LocationArray &locationList, bool &killFlag) {
+  /** defining values **/
+  geometry_msgs::Point point;
+  killFlag = false;
+  location loc;
 
-    /** if the bug is clear to move towards goal or not **/
-    /** bug is not clear to move **/
-    if(bugList[i].checkInsideObstacles(obstArray, goalX, goalY))
-    {
-    //cout<<bugList[i].getDistance()<<" "<<i<<endl;
-        /** check which obstacle line can be followed **/
-        int index;
-        int line = bugList[i].checkIfOnOtherLines(obstacleLines, index);
+  /** if the bug is clear to move towards goal or not **/
+  /** bug is not clear to move **/
+  if (bugList[i].checkInsideObstacles(obstArray, goalX, goalY)) {
+    // cout<<bugList[i].getDistance()<<" "<<i<<endl;
+    /** check which obstacle line can be followed **/
+    int index;
+    int line = bugList[i].checkIfOnOtherLines(obstacleLines, index);
 
-        bugList[i].setX(obstacleLines[line].point[index].x);
-        bugList[i].setY(obstacleLines[line].point[index].y);
-        bugList[i].setBoundaryID(line);
-        bugList[i].addDistance(bugList[i].getEuclideanDistance(bugList[i].getX(),bugList[i].getY(),bugList[i].getLastX(),bugList[i].getLastY()));
+    bugList[i].setX(obstacleLines[line].point[index].x);
+    bugList[i].setY(obstacleLines[line].point[index].y);
+    bugList[i].setBoundaryID(line);
+    bugList[i].addDistance(bugList[i].getEuclideanDistance(
+        bugList[i].getX(), bugList[i].getY(), bugList[i].getLastX(),
+        bugList[i].getLastY()));
 
-        /** add to path **/
-        loc.setX(bugList[i].getX());
-        loc.setY(bugList[i].getY());
-        loc.setDistance(bugList[i].getDistance());
-        loc.setPrevNode(bugList[i].getLastPointID());
-        loc.addBugtoList(bugList[i].getID());
+    /** add to path **/
+    loc.setX(bugList[i].getX());
+    loc.setY(bugList[i].getY());
+    loc.setDistance(bugList[i].getDistance());
+    loc.setPrevNode(bugList[i].getLastPointID());
+    loc.addBugtoList(bugList[i].getID());
 
-        /** adding to visulization list **/
-        point.x = bugList[i].getX();
-        point.y = bugList[i].getY();
-        point.z = 0;
-        pathList.push_back(point);
-        point.x = bugList[i].getLastX();
-        point.y = bugList[i].getLastY();
-        point.z = 0;
-        pathList.push_back(point);
+    /** adding to visulization list **/
+    point.x = bugList[i].getX();
+    point.y = bugList[i].getY();
+    point.z = 0;
+    pathList.push_back(point);
+    point.x = bugList[i].getLastX();
+    point.y = bugList[i].getLastY();
+    point.z = 0;
+    pathList.push_back(point);
 
-        int locID = locationList.searchLocation(bugList[i].getX(), bugList[i].getY());
-        if(locID != -1)
-        {
-            float prevDistanceToPoint = locationList.getDistance(locID);
-            if(prevDistanceToPoint <= loc.getDistance() && prevDistanceToPoint != -1)
-            {
-                killFlag = true;
-            }
-            else
-            {
-                if(locID == loc.getPrevNode())
-                {
-                    locationList.updateLocation(locID, loc, true);
-                }
-                else
-                {
-                    locationList.updateLocation(locID, loc, false);
-                }
-                bugList[i].setLastPointID(locID);
-            }
-        }
-        else
-        {
-            int tempID = locationList.addLocationToList(loc);
-            bugList[i].setLastPointID(tempID);
-        }
-    }
-    else
-    {
-        bugList[i].setState(movingToGoal);
-    }
-}
-
-void moveToGoal(vector<Bug> &bugList, int i, vector < obstacleLine > &obstacleLines, vector< vector<geometry_msgs::Point> > &obstArray,
-            vector< geometry_msgs::Point > &pathList, LocationArray &locationList, bool &killFlag)
-{
-    geometry_msgs::Point point;
-    killFlag = false;
-    location loc;
-    vector<intersectingPoint> lineIds;
-    lineIds = bugList[i].getLineIntersections(goalX, goalY, obstacleLines);
-
-    /** routine for getting nearest line **/
-    int lineId;
-    int intersectionPointID;
-    bool lineFlag = false;
-    float minDist = 9999;
-    float dist;
-    for(int j=0;j < lineIds.size();j++)
-    {
-        dist = bugList[i].getEuclideanDistance(bugList[i].getX(),bugList[i].getY(), lineIds[j].x,lineIds[j].y);
-
-        if(dist<minDist)
-        {
-            minDist = dist;
-            lineId = lineIds[j].ID;
-            intersectionPointID = j;
-            lineFlag = true;
-        }
-    }
-
-
-    /** if there is a line in the way **/
-    if(lineFlag)
-    {
-
-        bugList[i].setX(lineIds[intersectionPointID].x);
-        bugList[i].setY(lineIds[intersectionPointID].y);
-        bugList[i].addDistance(minDist);
-        //cout<<minDist<<" "<<i<<"\n";
-        //exit(1);
-        point.x = bugList[i].getX();
-        point.y = bugList[i].getY();
-        point.z = 0;
-        pathList.push_back(point);
-        point.x = bugList[i].getLastX();
-        point.y = bugList[i].getLastY();
-        point.z = 0;
-        pathList.push_back(point);
-
-        location loc;
-        loc.setX(lineIds[intersectionPointID].x);
-        loc.setY(lineIds[intersectionPointID].y);
-        loc.setDistance(bugList[i].getDistance());
-        loc.setPrevNode(bugList[i].getLastPointID());
-        loc.addBugtoList(bugList[i].getID());
-
-        /*** adding intersection point ***/
-        int locID = locationList.searchLocation(lineIds[intersectionPointID].x,lineIds[intersectionPointID].y);
-        if(locID != -1)
-        {
-            float prevDistanceToPoint = locationList.getDistance(locID);
-            if(prevDistanceToPoint <= loc.getDistance() && prevDistanceToPoint != -1)
-            {
-                killFlag = true;
-                return;
-            }
-            else
-            {
-                if(locID == loc.getPrevNode())
-                {
-                    locationList.updateLocation(locID, loc, true);
-                }
-                else
-                {
-                    locationList.updateLocation(locID, loc, false);
-                }
-                bugList[i].setLastPointID(locID);
-            }
-        }
-        else
-        {
-            int tempID = locationList.addLocationToList(loc);
-            bugList[i].setLastPointID(tempID);
-        }
-
-        /** changing state **/
-        bugList[i].setBoundaryID(lineId);
-        bugList[i].setState(boundaryFollowing);
-        //<<"nb"<<bugList[i].getDistance()<<" "<<i<<endl;
-        Bug newTempBug(boundaryFollowing, lineIds[intersectionPointID].x, lineIds[intersectionPointID].y, bugList[i].getDistance(), bugList[i].getLastPointID(), bugList[i].getBoundaryID());
-
-        bugList[i].setY(obstacleLines[lineId].point[1].y);
-        bugList[i].setX(obstacleLines[lineId].point[1].x);
-       bugList[i].addDistance(bugList[i].getEuclideanDistance(bugList[i].getLastX(),bugList[i].getLastY(),obstacleLines[lineId].point[1].x,obstacleLines[lineId].point[1].y));
-
-        point.x = bugList[i].getX();
-        point.y = bugList[i].getY();
-        point.z = 0;
-        pathList.push_back(point);
-        point.x = bugList[i].getLastX();
-        point.y = bugList[i].getLastY();
-        point.z = 0;
-        pathList.push_back(point);
-
-        /** add to path **/
-        loc.setX(bugList[i].getX());
-        loc.setY(bugList[i].getY());
-        loc.setDistance(bugList[i].getDistance());
-        loc.setPrevNode(bugList[i].getLastPointID());
-        loc.addBugtoList(bugList[i].getID());
-
-        locID = locationList.searchLocation(bugList[i].getX(), bugList[i].getY());
-        if(locID != -1)
-        {
-            float prevDistanceToPoint = locationList.getDistance(locID);
-            if(prevDistanceToPoint < loc.getDistance() && prevDistanceToPoint != -1)
-            {
-                killFlag = true;
-            }
-            else
-            {
-                if(locID == loc.getPrevNode())
-                {
-                    locationList.updateLocation(locID, loc, true);
-                }
-                else
-                {
-                    locationList.updateLocation(locID, loc, false);
-                }
-                bugList[i].setLastPointID(locID);
-            }
-        }
-        else
-        {
-            int tempID = locationList.addLocationToList(loc);
-            bugList[i].setLastPointID(tempID);
-        }
-
-
-        newTempBug.setBoundaryID(lineId);
-
-        float dist = newTempBug.getEuclideanDistance(newTempBug.getX(),newTempBug.getY(),obstacleLines[lineId].point[0].x,obstacleLines[lineId].point[0].y);
-        newTempBug.setX(obstacleLines[lineId].point[0].x);
-        newTempBug.setY(obstacleLines[lineId].point[0].y);
-        //cout<< "dist "<< dist << endl;
-        newTempBug.addDistance(dist);
-
-        point.x = newTempBug.getX();
-        point.y = newTempBug.getY();
-        point.z = 0;
-        pathList.push_back(point);
-        point.x = newTempBug.getLastX();
-        point.y = newTempBug.getLastY();
-        point.z = 0;
-        pathList.push_back(point);
-
-        /** add to path **/
-        loc.setX(newTempBug.getX());
-        loc.setY(newTempBug.getY());
-        loc.setDistance(newTempBug.getDistance());
-        loc.setPrevNode(newTempBug.getLastPointID());
-        loc.addBugtoList(newTempBug.getID());
-
-        locID = locationList.searchLocation(newTempBug.getX(), newTempBug.getY());
-        if(locID != -1)
-        {
-            float prevDistanceToPoint = locationList.getDistance(locID);
-            if(prevDistanceToPoint < loc.getDistance() && (prevDistanceToPoint != -1))
-            {
-            }
-            else
-            {
-                if(locID == loc.getPrevNode())
-                {
-                    locationList.updateLocation(locID, loc, true);
-                }
-                else
-                {
-                    locationList.updateLocation(locID, loc, false);
-                }
-                newTempBug.setLastPointID(locID);
-            }
-        }
-        else
-        {
-            int tempID = locationList.addLocationToList(loc);
-            newTempBug.setLastPointID(tempID);
-        }
-        bugList.push_back(newTempBug);
-    }
-
-    /** adding bug path to goal **/
-    else
-    {
-        location loc;
-        bugList[i].setState(reachedEnd);
+    int locID =
+        locationList.searchLocation(bugList[i].getX(), bugList[i].getY());
+    if (locID != -1) {
+      float prevDistanceToPoint = locationList.getDistance(locID);
+      if (prevDistanceToPoint <= loc.getDistance() &&
+          prevDistanceToPoint != -1) {
         killFlag = true;
-        //cout<<"g "<<bugList[i].getDistance()<<" "<<i<<endl;
-
-        float distanceTemp = bugList[i].getEuclideanDistance(bugList[i].getX(),bugList[i].getY(),goalX,goalY);
-        bugList[i].addDistance(distanceTemp);
-        //cout<<"gp "<<bugList[i].getDistance()<<" "<<i<<endl;
-
-        bugList[i].setX(goalX);
-        bugList[i].setY(goalY);
-
-        point.x = bugList[i].getX();
-        point.y = bugList[i].getY();
-        point.z = 0;
-        pathList.push_back(point);
-        point.x = bugList[i].getLastX();
-        point.y = bugList[i].getLastY();
-        point.z = 0;
-        pathList.push_back(point);
-
-        /** add to path **/
-        loc.setX(bugList[i].getX());
-        loc.setY(bugList[i].getY());
-        loc.setDistance(bugList[i].getDistance());
-        loc.setPrevNode(bugList[i].getLastPointID());
-        loc.addBugtoList(bugList[i].getID());
-
-        float prevDistanceToPoint = locationList.getDistance(1);
-
-        if(prevDistanceToPoint > loc.getDistance())
-        {
-            locationList.updateLocation(1, loc, false);
-            bugList[i].setLastPointID(1);
+      } else {
+        if (locID == loc.getPrevNode()) {
+          locationList.updateLocation(locID, loc, true);
+        } else {
+          locationList.updateLocation(locID, loc, false);
         }
+        bugList[i].setLastPointID(locID);
+      }
+    } else {
+      int tempID = locationList.addLocationToList(loc);
+      bugList[i].setLastPointID(tempID);
+    }
+  } else {
+    bugList[i].setState(movingToGoal);
+  }
+}
+
+void moveToGoal(vector<Bug> &bugList, int i,
+                vector<obstacleLine> &obstacleLines,
+                vector<vector<geometry_msgs::Point>> &obstArray,
+                vector<geometry_msgs::Point> &pathList,
+                LocationArray &locationList, bool &killFlag) {
+  geometry_msgs::Point point;
+  killFlag = false;
+  location loc;
+  vector<intersectingPoint> lineIds;
+  lineIds = bugList[i].getLineIntersections(goalX, goalY, obstacleLines);
+
+  /** routine for getting nearest line **/
+  int lineId;
+  int intersectionPointID;
+  bool lineFlag = false;
+  float minDist = 9999;
+  float dist;
+  for (int j = 0; j < lineIds.size(); j++) {
+    dist = bugList[i].getEuclideanDistance(bugList[i].getX(), bugList[i].getY(),
+                                           lineIds[j].x, lineIds[j].y);
+
+    if (dist < minDist) {
+      minDist = dist;
+      lineId = lineIds[j].ID;
+      intersectionPointID = j;
+      lineFlag = true;
+    }
+  }
+
+  /** if there is a line in the way **/
+  if (lineFlag) {
+
+    bugList[i].setX(lineIds[intersectionPointID].x);
+    bugList[i].setY(lineIds[intersectionPointID].y);
+    bugList[i].addDistance(minDist);
+    // cout<<minDist<<" "<<i<<"\n";
+    // exit(1);
+    point.x = bugList[i].getX();
+    point.y = bugList[i].getY();
+    point.z = 0;
+    pathList.push_back(point);
+    point.x = bugList[i].getLastX();
+    point.y = bugList[i].getLastY();
+    point.z = 0;
+    pathList.push_back(point);
+
+    location loc;
+    loc.setX(lineIds[intersectionPointID].x);
+    loc.setY(lineIds[intersectionPointID].y);
+    loc.setDistance(bugList[i].getDistance());
+    loc.setPrevNode(bugList[i].getLastPointID());
+    loc.addBugtoList(bugList[i].getID());
+
+    /*** adding intersection point ***/
+    int locID = locationList.searchLocation(lineIds[intersectionPointID].x,
+                                            lineIds[intersectionPointID].y);
+    if (locID != -1) {
+      float prevDistanceToPoint = locationList.getDistance(locID);
+      if (prevDistanceToPoint <= loc.getDistance() &&
+          prevDistanceToPoint != -1) {
         killFlag = true;
+        return;
+      } else {
+        if (locID == loc.getPrevNode()) {
+          locationList.updateLocation(locID, loc, true);
+        } else {
+          locationList.updateLocation(locID, loc, false);
+        }
+        bugList[i].setLastPointID(locID);
+      }
+    } else {
+      int tempID = locationList.addLocationToList(loc);
+      bugList[i].setLastPointID(tempID);
     }
+
+    /** changing state **/
+    bugList[i].setBoundaryID(lineId);
+    bugList[i].setState(boundaryFollowing);
+    //<<"nb"<<bugList[i].getDistance()<<" "<<i<<endl;
+    Bug newTempBug(boundaryFollowing, lineIds[intersectionPointID].x,
+                   lineIds[intersectionPointID].y, bugList[i].getDistance(),
+                   bugList[i].getLastPointID(), bugList[i].getBoundaryID());
+
+    bugList[i].setY(obstacleLines[lineId].point[1].y);
+    bugList[i].setX(obstacleLines[lineId].point[1].x);
+    bugList[i].addDistance(bugList[i].getEuclideanDistance(
+        bugList[i].getLastX(), bugList[i].getLastY(),
+        obstacleLines[lineId].point[1].x, obstacleLines[lineId].point[1].y));
+
+    point.x = bugList[i].getX();
+    point.y = bugList[i].getY();
+    point.z = 0;
+    pathList.push_back(point);
+    point.x = bugList[i].getLastX();
+    point.y = bugList[i].getLastY();
+    point.z = 0;
+    pathList.push_back(point);
+
+    /** add to path **/
+    loc.setX(bugList[i].getX());
+    loc.setY(bugList[i].getY());
+    loc.setDistance(bugList[i].getDistance());
+    loc.setPrevNode(bugList[i].getLastPointID());
+    loc.addBugtoList(bugList[i].getID());
+
+    locID = locationList.searchLocation(bugList[i].getX(), bugList[i].getY());
+    if (locID != -1) {
+      float prevDistanceToPoint = locationList.getDistance(locID);
+      if (prevDistanceToPoint < loc.getDistance() &&
+          prevDistanceToPoint != -1) {
+        killFlag = true;
+      } else {
+        if (locID == loc.getPrevNode()) {
+          locationList.updateLocation(locID, loc, true);
+        } else {
+          locationList.updateLocation(locID, loc, false);
+        }
+        bugList[i].setLastPointID(locID);
+      }
+    } else {
+      int tempID = locationList.addLocationToList(loc);
+      bugList[i].setLastPointID(tempID);
+    }
+
+    newTempBug.setBoundaryID(lineId);
+
+    float dist = newTempBug.getEuclideanDistance(
+        newTempBug.getX(), newTempBug.getY(), obstacleLines[lineId].point[0].x,
+        obstacleLines[lineId].point[0].y);
+    newTempBug.setX(obstacleLines[lineId].point[0].x);
+    newTempBug.setY(obstacleLines[lineId].point[0].y);
+    // cout<< "dist "<< dist << endl;
+    newTempBug.addDistance(dist);
+
+    point.x = newTempBug.getX();
+    point.y = newTempBug.getY();
+    point.z = 0;
+    pathList.push_back(point);
+    point.x = newTempBug.getLastX();
+    point.y = newTempBug.getLastY();
+    point.z = 0;
+    pathList.push_back(point);
+
+    /** add to path **/
+    loc.setX(newTempBug.getX());
+    loc.setY(newTempBug.getY());
+    loc.setDistance(newTempBug.getDistance());
+    loc.setPrevNode(newTempBug.getLastPointID());
+    loc.addBugtoList(newTempBug.getID());
+
+    locID = locationList.searchLocation(newTempBug.getX(), newTempBug.getY());
+    if (locID != -1) {
+      float prevDistanceToPoint = locationList.getDistance(locID);
+      if (prevDistanceToPoint < loc.getDistance() &&
+          (prevDistanceToPoint != -1)) {
+      } else {
+        if (locID == loc.getPrevNode()) {
+          locationList.updateLocation(locID, loc, true);
+        } else {
+          locationList.updateLocation(locID, loc, false);
+        }
+        newTempBug.setLastPointID(locID);
+      }
+    } else {
+      int tempID = locationList.addLocationToList(loc);
+      newTempBug.setLastPointID(tempID);
+    }
+    bugList.push_back(newTempBug);
+  }
+
+  /** adding bug path to goal **/
+  else {
+    location loc;
+    bugList[i].setState(reachedEnd);
+    killFlag = true;
+    // cout<<"g "<<bugList[i].getDistance()<<" "<<i<<endl;
+
+    float distanceTemp = bugList[i].getEuclideanDistance(
+        bugList[i].getX(), bugList[i].getY(), goalX, goalY);
+    bugList[i].addDistance(distanceTemp);
+    // cout<<"gp "<<bugList[i].getDistance()<<" "<<i<<endl;
+
+    bugList[i].setX(goalX);
+    bugList[i].setY(goalY);
+
+    point.x = bugList[i].getX();
+    point.y = bugList[i].getY();
+    point.z = 0;
+    pathList.push_back(point);
+    point.x = bugList[i].getLastX();
+    point.y = bugList[i].getLastY();
+    point.z = 0;
+    pathList.push_back(point);
+
+    /** add to path **/
+    loc.setX(bugList[i].getX());
+    loc.setY(bugList[i].getY());
+    loc.setDistance(bugList[i].getDistance());
+    loc.setPrevNode(bugList[i].getLastPointID());
+    loc.addBugtoList(bugList[i].getID());
+
+    float prevDistanceToPoint = locationList.getDistance(1);
+
+    if (prevDistanceToPoint > loc.getDistance()) {
+      locationList.updateLocation(1, loc, false);
+      bugList[i].setLastPointID(1);
+    }
+    killFlag = true;
+  }
 }
 
-bool getLineIntersections(float pointOneX, float pointOneY, float pointTwoX, float pointTwoY, vector < obstacleLine > &obstacleLines)
-{
-    float p0_x = pointOneX;
-    float p0_y = pointOneY;
-    float p1_x = pointTwoX;
-    float p1_y = pointTwoY;
+bool getLineIntersections(float pointOneX, float pointOneY, float pointTwoX,
+                          float pointTwoY,
+                          vector<obstacleLine> &obstacleLines) {
+  float p0_x = pointOneX;
+  float p0_y = pointOneY;
+  float p1_x = pointTwoX;
+  float p1_y = pointTwoY;
 
-    float p2_x;
-    float p2_y;
-    float p3_x;
-    float p3_y;
+  float p2_x;
+  float p2_y;
+  float p3_x;
+  float p3_y;
 
-    float i_x,i_y;
-    vector<intersectingPoint> intersectingLinesID;
+  float i_x, i_y;
+  vector<intersectingPoint> intersectingLinesID;
 
-    intersectingPoint iPoint;
+  intersectingPoint iPoint;
 
-    for(int i=0; i< obstacleLines.size();i++)
-    {
-        p2_x = obstacleLines[i].point[0].x;
-        p2_y = obstacleLines[i].point[0].y;
-        p3_x = obstacleLines[i].point[1].x;
-        p3_y = obstacleLines[i].point[1].y;
+  for (int i = 0; i < obstacleLines.size(); i++) {
+    p2_x = obstacleLines[i].point[0].x;
+    p2_y = obstacleLines[i].point[0].y;
+    p3_x = obstacleLines[i].point[1].x;
+    p3_y = obstacleLines[i].point[1].y;
 
-        float s1_x, s1_y, s2_x, s2_y;
-        s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
-        s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
+    float s1_x, s1_y, s2_x, s2_y;
+    s1_x = p1_x - p0_x;
+    s1_y = p1_y - p0_y;
+    s2_x = p3_x - p2_x;
+    s2_y = p3_y - p2_y;
 
-        float s, t;
-        s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
-        t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+    float s, t;
+    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) /
+        (-s2_x * s1_y + s1_x * s2_y);
+    t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) /
+        (-s2_x * s1_y + s1_x * s2_y);
 
-        if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
-        {
-            // Collision detected
-            i_x = p0_x + (t * s1_x);
-            i_y = p0_y + (t * s1_y);
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+      // Collision detected
+      i_x = p0_x + (t * s1_x);
+      i_y = p0_y + (t * s1_y);
 
-            if(i_x == p2_x && i_y == p2_y) continue;
-            if(i_x == p3_x && i_y == p3_y) continue;
+      if (i_x == p2_x && i_y == p2_y)
+        continue;
+      if (i_x == p3_x && i_y == p3_y)
+        continue;
 
-            return true;
-        }
+      return true;
     }
-    return false; // No collision
+  }
+  return false; // No collision
 }
 
-void pruningFinalPath(vector < obstacleLine > &obstacleLines, visualization_msgs::Marker &finalPath)
-{
-    vector< geometry_msgs::Point > prunedPath;
-     finalPathDistance = 0;
-    prunedPath.push_back(finalPath.points[0]);
+void pruningFinalPath(vector<obstacleLine> &obstacleLines,
+                      visualization_msgs::Marker &finalPath) {
+  vector<geometry_msgs::Point> prunedPath;
+  finalPathDistance = 0;
+  prunedPath.push_back(finalPath.points[0]);
 
-    bool intersectionResult = false;
+  bool intersectionResult = false;
 
-    for(int i=1;i<finalPath.points.size();i++)
+  for (int i = 1; i < finalPath.points.size(); i++) {
+    intersectionResult = getLineIntersections(
+        prunedPath[prunedPath.size() - 1].x,
+        prunedPath[prunedPath.size() - 1].y, finalPath.points[i].x,
+        finalPath.points[i].y, obstacleLines);
+    if (intersectionResult == true) // intersection detected
     {
-        intersectionResult = getLineIntersections(prunedPath[prunedPath.size() - 1].x,prunedPath[prunedPath.size() - 1].y, finalPath.points[i].x, finalPath.points[i].y,obstacleLines);
-        if(intersectionResult == true) //intersection detected
-        {
-            prunedPath.push_back(finalPath.points[i-1]);
-            finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
-        }
+      prunedPath.push_back(finalPath.points[i - 1]);
+      finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x -
+                                        prunedPath[prunedPath.size() - 2].x,
+                                    2) +
+                                pow(prunedPath[prunedPath.size() - 1].y -
+                                        prunedPath[prunedPath.size() - 2].y,
+                                    2));
     }
-    prunedPath.push_back(finalPath.points[finalPath.points.size()-1]);
-    finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x - prunedPath[prunedPath.size() - 2].x,2)+pow(prunedPath[prunedPath.size() - 1].y - prunedPath[prunedPath.size() - 2].y,2));
-    finalPath.points = prunedPath;
-    //ROS_INFO("Cost = %f",distance);
+  }
+  prunedPath.push_back(finalPath.points[finalPath.points.size() - 1]);
+  finalPathDistance += sqrt(pow(prunedPath[prunedPath.size() - 1].x -
+                                    prunedPath[prunedPath.size() - 2].x,
+                                2) +
+                            pow(prunedPath[prunedPath.size() - 1].y -
+                                    prunedPath[prunedPath.size() - 2].y,
+                                2));
+  finalPath.points = prunedPath;
+  // ROS_INFO("Cost = %f",distance);
 }
 
+int main(int argc, char **argv) {
 
-int main(int argc, char** argv)
-{
+  if (argc !=
+      3) // Check the value of passedArgumentCount. if filename is not passed
+  {
+    std::cout << "usage -> rosrun path_planning nodeName <filename1> "
+                 "<filename2>\n"; // Inform the user of how to use the program
+    exit(0);
+  }
 
-    if(argc != 3)// Check the value of passedArgumentCount. if filename is not passed
-    {
-        std::cout << "usage -> rosrun path_planning nodeName <filename1> <filename2>\n"; // Inform the user of how to use the program
-        exit(0);
-    }
+  // initializing ROS
+  ros::init(argc, argv, "bug_node");
+  ros::NodeHandle n;
 
+  // defining Publisher
+  ros::Publisher bug_publisher =
+      n.advertise<visualization_msgs::Marker>("path_planner_bug", 1);
+  ros::Duration(3).sleep();
+  // defining markers
+  visualization_msgs::Marker sourcePoint;
+  visualization_msgs::Marker sPoint;
+  visualization_msgs::Marker gPoint;
+  visualization_msgs::Marker goalPoint;
+  visualization_msgs::Marker pathMarker;
+  visualization_msgs::Marker finalPath;
 
-    //initializing ROS
-    ros::init(argc,argv,"bug_node");
-	ros::NodeHandle n;
+  readSourceGoalFromFile(argv[2], sourceX, sourceY, goalX, goalY);
+  // cout<< sourceX<< " " << sourceY<< " " << goalX<< " " << goalY<< "\n";
+  initializeMarkers(sourcePoint, goalPoint, pathMarker, finalPath);
 
-	//defining Publisher
-	ros::Publisher bug_publisher = n.advertise<visualization_msgs::Marker>("path_planner_bug",1);
-    ros::Duration(3).sleep();
-	//defining markers
-    visualization_msgs::Marker sourcePoint;
-    visualization_msgs::Marker sPoint;
-    visualization_msgs::Marker gPoint;
-    visualization_msgs::Marker goalPoint;
-    visualization_msgs::Marker pathMarker;
-    visualization_msgs::Marker finalPath;
+  sPoint = sourcePoint;
+  gPoint = goalPoint;
 
-    readSourceGoalFromFile(argv[2],sourceX,sourceY,goalX,goalY);
-    //cout<< sourceX<< " " << sourceY<< " " << goalX<< " " << goalY<< "\n";
-    initializeMarkers(sourcePoint, goalPoint, pathMarker, finalPath);
+  // setting source and goal
+  sPoint.pose.position.x = sourceX;
+  sPoint.pose.position.y = sourceY;
 
-    sPoint = sourcePoint;
-    gPoint = goalPoint;
+  gPoint.pose.position.x = goalX;
+  gPoint.pose.position.y = goalY;
 
-    //setting source and goal
-    sPoint.pose.position.x = sourceX;
-    sPoint.pose.position.y = sourceY;
+  bug_publisher.publish(sPoint);
+  bug_publisher.publish(gPoint);
 
-    gPoint.pose.position.x = goalX;
-    gPoint.pose.position.y = goalY;
+  goalPoint.pose.position.x = goalX;
+  goalPoint.pose.position.y = goalY;
 
-    bug_publisher.publish(sPoint);
-    bug_publisher.publish(gPoint);
+  /** initializing bugs**/
+  vector<Bug> bugList;
+  Bug mainBug(movingToGoal, sourceX, sourceY, 0, 0, -1);
+  bugList.push_back(mainBug);
 
-    goalPoint.pose.position.x = goalX;
-    goalPoint.pose.position.y = goalY;
+  LocationArray locationList;
+  location loc1(0, 0, 0, sourceX, sourceY, 0, 0);
+  locationList.addLocationToList(loc1);
 
-    /** initializing bugs**/
-    vector<Bug> bugList;
-    Bug mainBug(movingToGoal,sourceX,sourceY,0,0,-1);
-    bugList.push_back(mainBug);
+  location loc2(0, 1, 0, goalX, goalY, 99999, 0);
+  locationList.addLocationToList(loc2);
 
-    LocationArray locationList;
-    location loc1(0,0,0,sourceX,sourceY,0,0);
-    locationList.addLocationToList(loc1);
+  vector<geometry_msgs::Point> pathList;
 
-    location loc2(0,1,0,goalX,goalY,99999,0);
-    locationList.addLocationToList(loc2);
+  obstacles obstacle(argv[1]);
+  vector<obstacleLine> obstacleLines = obstacle.getObstacleLines();
+  vector<vector<geometry_msgs::Point>> obstacleList =
+      obstacle.getObstacleArray();
 
-    vector< geometry_msgs::Point > pathList;
+  vector<int> idsToRemove;
 
-    obstacles obstacle(argv[1]);
-    vector < obstacleLine > obstacleLines = obstacle.getObstacleLines();
-    vector< vector<geometry_msgs::Point> > obstacleList = obstacle.getObstacleArray();
-
-    vector<int> idsToRemove;
-
-    ros::Time time = ros::Time::now();
-//
-    while(ros::ok())
-    {
-        displayBugs(bugList,sourcePoint,bug_publisher);
-        displayPaths(pathList, pathMarker, bug_publisher);
-        ros::Duration(0.25).sleep();
-        for(int i= 0;i < bugList.size();)
-        {
-
-            bool flaged = false;
-            for(int j=0;j < idsToRemove.size();j++)
-            {
-                if(idsToRemove[j] == bugList[i].getID())
-                {
-                    bugList.erase(bugList.begin()+i);
-                    flaged = true;
-                    break;
-                }
-            }
-            if(flaged) continue;
-            if(bugList[i].getState() == reachedEnd)
-            {
-                bugList.erase(bugList.begin()+i);
-                continue;
-            }
-            i++;
-        }
-        idsToRemove.clear();
-           //ros::Duration(1).sleep();
-        if(bugList.size() == 0)
-        {
-            calcFinalPath(locationList,finalPath,bug_publisher);
-            break;
-        }
-
-        for(int i=0;i<bugList.size();i++)
-        {
-            //cout<<endl;
-            if(bugList[i].getState() == movingToGoal)
-            {
-                bool killFlag;
-                //cout<<"mg"<<bugList[i].getDistance()<<" "<<i<<endl;
-                moveToGoal(bugList,i,obstacleLines,obstacleList,pathList,locationList, killFlag);
-                if(killFlag)
-                {
-                    idsToRemove.push_back(bugList[i].getID());
-                }
-            }
-            else if(bugList[i].getState() == boundaryFollowing)
-            {
-                bool killFlag;
-                //cout<<"bf"<<bugList[i].getDistance()<<" "<<i<<endl;
-                boundaryFollow(bugList,i,obstacleLines,obstacleList, pathList,locationList, killFlag);
-                if(killFlag)
-                {
-                    idsToRemove.push_back(bugList[i].getID());
-                }
-            }
-        }
-    }
-    ros::Time endTime = ros::Time::now();
-    int nsec = endTime.nsec - time.nsec;
-    int sec = endTime.sec - time.sec;
-    if(nsec < 0)
-    {
-        sec -= 1;
-        nsec += 1000000000;
-    }
-    ROS_INFO("End, Total Time = %d, %d", sec, nsec);
-    double mainTime = sec + (nsec / 1000000000.0);
-    time = ros::Time::now();
-    pruningFinalPath(obstacleLines,finalPath);
-
-    endTime = ros::Time::now();
-     nsec = endTime.nsec - time.nsec;
-     sec = endTime.sec - time.sec;
-    if(nsec < 0)
-    {
-        sec -= 1;
-        nsec += 1000000000;
-    }
-    ROS_INFO("Pruning Time = %d, %d", sec, nsec);
-    double prunTime = sec + (nsec / 1000000000.0);
-    ROS_INFO("COST %f", finalPathDistance);
-    displayBugs(bugList,sourcePoint,bug_publisher);
-    bug_publisher.publish(goalPoint);
-    bug_publisher.publish(sourcePoint);
+  ros::Time time = ros::Time::now();
+  //
+  while (ros::ok()) {
+    displayBugs(bugList, sourcePoint, bug_publisher);
     displayPaths(pathList, pathMarker, bug_publisher);
-    bug_publisher.publish(finalPath);
-    //displayFinalPath(locationList, finalPath, bug_publisher);
-    ros::Duration(1).sleep();
-    ros::spinOnce();
-    ofstream logFile;
-    logFile.open("bugLog.txt",ofstream::app);
+    ros::Duration(0.25).sleep();
+    for (int i = 0; i < bugList.size();) {
 
-    logFile << preFinalPathDistance << "," << finalPathDistance << "," << mainTime << "," << prunTime << endl;
-
-    logFile.close();
-
-    vector< geometry_msgs::Point > myPath = finalPath.points;
-    //saving path
-    logFile.open("bugPath.txt",ofstream::app);
-
-    for(int i=0;i<myPath.size();i++)
-    {
-        logFile <<myPath[i].x<<","<<myPath[i].y<<endl;
+      bool flaged = false;
+      for (int j = 0; j < idsToRemove.size(); j++) {
+        if (idsToRemove[j] == bugList[i].getID()) {
+          bugList.erase(bugList.begin() + i);
+          flaged = true;
+          break;
+        }
+      }
+      if (flaged)
+        continue;
+      if (bugList[i].getState() == reachedEnd) {
+        bugList.erase(bugList.begin() + i);
+        continue;
+      }
+      i++;
+    }
+    idsToRemove.clear();
+    // ros::Duration(1).sleep();
+    if (bugList.size() == 0) {
+      calcFinalPath(locationList, finalPath, bug_publisher);
+      break;
     }
 
-    logFile.close();
+    for (int i = 0; i < bugList.size(); i++) {
+      // cout<<endl;
+      if (bugList[i].getState() == movingToGoal) {
+        bool killFlag;
+        // cout<<"mg"<<bugList[i].getDistance()<<" "<<i<<endl;
+        moveToGoal(bugList, i, obstacleLines, obstacleList, pathList,
+                   locationList, killFlag);
+        if (killFlag) {
+          idsToRemove.push_back(bugList[i].getID());
+        }
+      } else if (bugList[i].getState() == boundaryFollowing) {
+        bool killFlag;
+        // cout<<"bf"<<bugList[i].getDistance()<<" "<<i<<endl;
+        boundaryFollow(bugList, i, obstacleLines, obstacleList, pathList,
+                       locationList, killFlag);
+        if (killFlag) {
+          idsToRemove.push_back(bugList[i].getID());
+        }
+      }
+    }
+  }
+  ros::Time endTime = ros::Time::now();
+  int nsec = endTime.nsec - time.nsec;
+  int sec = endTime.sec - time.sec;
+  if (nsec < 0) {
+    sec -= 1;
+    nsec += 1000000000;
+  }
+  ROS_INFO("End, Total Time = %d, %d", sec, nsec);
+  double mainTime = sec + (nsec / 1000000000.0);
+  time = ros::Time::now();
+  pruningFinalPath(obstacleLines, finalPath);
 
-    return 1;
+  endTime = ros::Time::now();
+  nsec = endTime.nsec - time.nsec;
+  sec = endTime.sec - time.sec;
+  if (nsec < 0) {
+    sec -= 1;
+    nsec += 1000000000;
+  }
+  ROS_INFO("Pruning Time = %d, %d", sec, nsec);
+  double prunTime = sec + (nsec / 1000000000.0);
+  ROS_INFO("COST %f", finalPathDistance);
+  displayBugs(bugList, sourcePoint, bug_publisher);
+  bug_publisher.publish(goalPoint);
+  bug_publisher.publish(sourcePoint);
+  displayPaths(pathList, pathMarker, bug_publisher);
+  bug_publisher.publish(finalPath);
+  // displayFinalPath(locationList, finalPath, bug_publisher);
+  ros::Duration(1).sleep();
+  ros::spinOnce();
+  ofstream logFile;
+  logFile.open("bugLog.txt", ofstream::app);
+
+  logFile << preFinalPathDistance << "," << finalPathDistance << "," << mainTime
+          << "," << prunTime << endl;
+
+  logFile.close();
+
+  vector<geometry_msgs::Point> myPath = finalPath.points;
+  // saving path
+  logFile.open("bugPath.txt", ofstream::app);
+
+  for (int i = 0; i < myPath.size(); i++) {
+    logFile << myPath[i].x << "," << myPath[i].y << endl;
+  }
+
+  logFile.close();
+
+  return 1;
 }
